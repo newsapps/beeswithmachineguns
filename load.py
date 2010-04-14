@@ -7,6 +7,8 @@ import boto
 from fabric.api import *
 import paramiko
 
+EC2_INSTANCE_TYPE = 'm1.small'
+
 STATE_FILENAME = 'theswarm.txt'
 
 # Load state from file
@@ -28,7 +30,7 @@ def _write_server_list(instances):
     
 # Methods
 
-def up(count):
+def up(count=5, group='staging', zone='us-east-1d'):
     """
     Startup the load testing server.
     """
@@ -49,9 +51,9 @@ def up(count):
         min_count=count,
         max_count=count,
         key_name='frakkingtoasters',
-        security_groups=['staging'],
-        instance_type='m1.small',
-        placement='us-east-1d')
+        security_groups=[group],
+        instance_type=EC2_INSTANCE_TYPE,
+        placement=zone)
         
     print 'Waiting for bees to load their machine guns...'
         
@@ -174,7 +176,7 @@ def test(url, c=10, n=100):
     mean_response = sum(complete_results) / len(complete_results)
     
     if incomplete_results:
-        print 'Target failed to full respond to %i bees.' % incomplete_results
+        print 'Target failed to fully respond to %i bees.' % incomplete_results
         
     print 'Target responded to bees at an average rate of %f ms.' % mean_response
     
