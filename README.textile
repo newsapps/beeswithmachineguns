@@ -1,0 +1,21 @@
+h1. An Army of Bees with Machine Guns!!!
+
+h2. Description
+
+A utility for arming (creating) many bees (small EC2 in stances) to attack (load test) targets (web applications).
+
+This application is very alpha / rough / incomplete.
+
+h2. Dependencies
+
+* Boto
+* Fabric
+* Paramiko
+
+h2. Tested with
+
+* Python 2.6
+
+h2. Credits
+
+A creation of the News Applications team at the Chicago Tribune--visit us at "http://apps.chicagotribune.com/":http://apps.chicagotribune.com/.
