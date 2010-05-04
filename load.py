@@ -95,12 +95,32 @@ def up(count=5, group='staging', zone='us-east-1d'):
             
     print 'The swarm has assembled %i bees.' % len(reservation.instances)
     
+def report():
+    """
+    Report the status of the load testing servers.
+    """  
+    if not env.instance_ids:
+        print 'No bees have been mobilized.'
+        return
+
+    ec2_connection = boto.connect_ec2()
+        
+    reservations = ec2_connection.get_all_instances(instance_ids=env.instance_ids)
+
+    instances = []
+
+    for reservation in reservations:
+        instances.extend(reservation.instances)
+        
+    for instance in instances:
+        print 'Bee ' + instance.id + ': ' + instance.state
+    
 def down():
     """
     Shutdown the load testing server.
     """
     if not env.instance_ids:
-        print 'No test instances available for shutdown.'
+        print 'No bees have been mobilized.'
         return
     
     print 'Connecting to the hive.'
@@ -178,7 +198,7 @@ def test(url, c=10, n=100):
     for i, instance in enumerate(instances):
         params.append({
             'i': i,
-            'instancd_id': instance.id,
+            'instance_id': instance.id,
             'instance_name': instance.public_dns_name,
             'url': url,
             'concurrent_requests': c,
