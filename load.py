@@ -167,11 +167,13 @@ def _attack(params):
     requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)        
     fifty_percent_search = re.search('\s+50\%\s+([0-9]+)', ab_results)
     ninety_percent_search = re.search('\s+90\%\s+([0-9]+)', ab_results)
+    complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
     
     response['ms_per_request'] = float(ms_per_request_search.group(1))
     response['requests_per_second'] = float(requests_per_second_search.group(1))
     response['fifty_percent'] = float(fifty_percent_search.group(1))
     response['ninety_percent'] = float(ninety_percent_search.group(1))
+    response['complete_requests'] = float(complete_requests_search.group(1))
     
     print 'Bee %i is out of ammo.' % params['i']
     
@@ -188,6 +190,10 @@ def _print_results(results):
     if incomplete_results:
         print '     Target failed to fully respond to %i bees.' % incomplete_results
 
+    complete_results = [r['complete_requests'] for r in results if r is not None]
+    total_complete_requests = sum(complete_results)
+    print '     Complete requests:\t\t%i' % total_complete_requests
+
     complete_results = [r['requests_per_second'] for r in results if r is not None]
     mean_requests = sum(complete_results) / len(complete_results)
     print '     Requests per second:\t%f [#/sec] (mean)' % mean_requests
@@ -198,11 +204,11 @@ def _print_results(results):
         
     complete_results = [r['fifty_percent'] for r in results if r is not None]
     mean_fifty = sum(complete_results) / len(complete_results)
-    print '     50%% response times:\t%f [ms] (mean)' % mean_fifty
+    print '     50%% response time:\t\t%f [ms] (mean)' % mean_fifty
         
     complete_results = [r['ninety_percent'] for r in results if r is not None]
     mean_ninety = sum(complete_results) / len(complete_results)
-    print '     90%% response times:\t%f [ms] (mean)' % mean_ninety
+    print '     90%% response time:\t\t%f [ms] (mean)' % mean_ninety
     
     if mean_response < 500:
         print 'Mission Assessment: Target crushed bee offensive.'
@@ -240,7 +246,7 @@ def attack(url, n=10000, c=100):
     requests_per_instance = int(n) / instance_count
     connections_per_instance = int(c) / instance_count
         
-    print 'Each of %i bees will make %s concurrent requests and %s total requests.' % (instance_count, connections_per_instance, requests_per_instance)
+    print 'Each of %i bees will fire %s rounds, %s at a time.' % (instance_count, requests_per_instance, connections_per_instance)
     
     params = []
     
