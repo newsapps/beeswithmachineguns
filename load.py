@@ -44,7 +44,7 @@ if os.path.isfile(STATE_FILENAME):
         text = f.read()
         env.instance_ids = text.split('\n')
         
-        print 'Read %i bees from the roster' % len(env.instance_ids)
+        print 'Read %i bees from the roster.' % len(env.instance_ids)
 else:
     env.instance_ids = []
 
@@ -113,7 +113,7 @@ def report():
         instances.extend(reservation.instances)
         
     for instance in instances:
-        print 'Bee ' + instance.id + ': ' + instance.state
+        print 'Bee %s: %s' % (instance.id, instance.state)
     
 def down():
     """
@@ -155,22 +155,67 @@ def _attack(params):
     
     stdin, stdout, stderr = client.exec_command('ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(url)s' % params)
     
-    ab_results = stdout.read()
-    s = re.search('Time\ per\ request:\s+([0-9.]+)\ \[ms\]\ \(mean\)', ab_results)
+    response = {}
     
-    if not s:
+    ab_results = stdout.read()
+    ms_per_request_search = re.search('Time\ per\ request:\s+([0-9.]+)\ \[ms\]\ \(mean\)', ab_results)
+    
+    if not ms_per_request_search:
         print 'Bee %i lost sight of the target (connection timed out).' % params['i']
         return None
+        
+    requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)        
+    fifty_percent_search = re.search('\s+50\%\s+([0-9]+)', ab_results)
+    ninety_percent_search = re.search('\s+90\%\s+([0-9]+)', ab_results)
     
-    ms_per_request = float(s.group(1))
+    response['ms_per_request'] = float(ms_per_request_search.group(1))
+    response['requests_per_second'] = float(requests_per_second_search.group(1))
+    response['fifty_percent'] = float(fifty_percent_search.group(1))
+    response['ninety_percent'] = float(ninety_percent_search.group(1))
     
     print 'Bee %i is out of ammo.' % params['i']
     
     client.close()
     
-    return ms_per_request
+    return response
+    
+def _print_results(results):
+    """
+    Print summarized load-testing results.
+    """
+    incomplete_results = [r for r in results if r is None]
+    
+    if incomplete_results:
+        print '     Target failed to fully respond to %i bees.' % incomplete_results
 
-def test(url, c=10, n=100):
+    complete_results = [r['requests_per_second'] for r in results if r is not None]
+    mean_requests = sum(complete_results) / len(complete_results)
+    print '     Requests per second:\t%f [#/sec] (mean)' % mean_requests
+        
+    complete_results = [r['ms_per_request'] for r in results if r is not None]
+    mean_response = sum(complete_results) / len(complete_results)
+    print '     Time per request:\t\t%f [ms] (mean)' % mean_response
+        
+    complete_results = [r['fifty_percent'] for r in results if r is not None]
+    mean_fifty = sum(complete_results) / len(complete_results)
+    print '     50%% response times:\t%f [ms] (mean)' % mean_fifty
+        
+    complete_results = [r['ninety_percent'] for r in results if r is not None]
+    mean_ninety = sum(complete_results) / len(complete_results)
+    print '     90%% response times:\t%f [ms] (mean)' % mean_ninety
+    
+    if mean_response < 500:
+        print 'Mission Assessment: Target crushed bee offensive.'
+    elif mean_response < 1000:
+        print 'Mission Assessment: Target successfully fended off the swarm.'
+    elif mean_response < 1500:
+        print 'Mission Assessment: Target wounded, but operational.'
+    elif mean_response < 2000:
+        print 'Mission Assessment: Target severely compromised.'
+    else:
+        print 'Mission Assessment: Swarm annihilated target.'
+
+def attack(url, n=10000, c=100):
     """
     Test the root url of this site.
     """
@@ -190,8 +235,12 @@ def test(url, c=10, n=100):
     
     for reservation in reservations:
         instances.extend(reservation.instances)
+    
+    instance_count = len(instances)
+    requests_per_instance = int(n) / instance_count
+    connections_per_instance = int(c) / instance_count
         
-    print 'Each bee will make %s concurrent requests and %s total requests.' % (c, n)
+    print 'Each of %i bees will make %s concurrent requests and %s total requests.' % (instance_count, connections_per_instance, requests_per_instance)
     
     params = []
     
@@ -201,8 +250,8 @@ def test(url, c=10, n=100):
             'instance_id': instance.id,
             'instance_name': instance.public_dns_name,
             'url': url,
-            'concurrent_requests': c,
-            'num_requests': n,
+            'concurrent_requests': connections_per_instance,
+            'num_requests': requests_per_instance,
         })
     
     print 'Stinging URL so it will be cached for the attack.'
@@ -210,31 +259,14 @@ def test(url, c=10, n=100):
     # Ping url so it will be cached for testing
     local('curl %s >> /dev/null' % url)
     
-    print 'Assembling the swarm.'
+    print 'Organizing the swarm.'
     
     # Spin up processes for connecting to EC2 instances
     pool = Pool(len(params))
     results = pool.map(_attack, params)
     
-    complete_results = [r for r in results if r is not None]
-    incomplete_results = [r for r in results if r is None]
+    print 'Offensive complete.'
     
-    mean_response = sum(complete_results) / len(complete_results)
-    
-    if incomplete_results:
-        print 'Target failed to fully respond to %i bees.' % incomplete_results
-        
-    print 'Target responded to bees at an average rate of %f ms.' % mean_response
-    
-    if mean_response < 500:
-        print 'Mission Assessment: Target crushed bee offensive.'
-    elif mean_response < 1000:
-        print 'Mission Assessment: Target successfully fended off the swarm.'
-    elif mean_response < 1500:
-        print 'Mission Assessment: Target wounded, but operational.'
-    elif mean_response < 2000:
-        print 'Mission Assessment: Target severely compromised.'
-    else:
-        print 'Mission Assessment: Swarm annihilated target.'
-        
+    _print_results(results)
+
     print 'The swarm is awaiting new orders.'
