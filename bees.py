@@ -188,14 +188,14 @@ def _print_results(results):
     incomplete_results = [r for r in results if r is None]
     
     if incomplete_results:
-        print '     Target failed to fully respond to %i bees.' % incomplete_results
+        print '     Target failed to fully respond to %i bees.' % len(incomplete_results)
 
     complete_results = [r['complete_requests'] for r in results if r is not None]
     total_complete_requests = sum(complete_results)
     print '     Complete requests:\t\t%i' % total_complete_requests
 
     complete_results = [r['requests_per_second'] for r in results if r is not None]
-    mean_requests = sum(complete_results) / len(complete_results)
+    mean_requests = sum(complete_results)
     print '     Requests per second:\t%f [#/sec] (mean)' % mean_requests
         
     complete_results = [r['ms_per_request'] for r in results if r is not None]
