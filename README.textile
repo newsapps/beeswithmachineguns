@@ -2,9 +2,11 @@ h1. Bees with Machine Guns!
 
 h2. Description
 
-A utility for arming (creating) many bees (small EC2 in stances) to attack (load test) targets (web applications).
+A utility for arming (creating) many bees (micro EC2 in stances) to attack (load test) targets (web applications).
 
 h2. Dependencies
+
+Required:
 
 * boto
 * fabric
@@ -31,6 +33,10 @@ fab -f bees.py up:5
 fab -f bees.py attack:http://YOUR-DOMAIN.com/,1000,100
 fab -f bees.py down
 </pre>
+
+h2. Quirks
+
+The AMI to clone and SSH key to use are currently hard-coded into the up() function, expect this to be fixed shortly.  In the meantime, its open-source, fork it!
 
 h2. Tested with
 
