@@ -46,6 +46,8 @@ h2. Credits
 
 A creation of the News Applications team at the Chicago Tribune--visit "our blog":http://apps.chicagotribune.com/ and read "our post about the project":http://blog.apps.chicagotribune.com/2010/07/%2008/bees-with-machine-guns/
 
+Initial refactoring code and inspiration from "Jeff Larson":http://github.com/thejefflarson
+
 h2. License
 
 MIT.
