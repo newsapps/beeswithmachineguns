@@ -54,7 +54,7 @@ def _write_server_list(instances):
 
 # Methods
 
-def up(count=5, group='staging', zone='us-east-1d'):
+def up(count, group, zone, image_id, key_name):
     """
     Startup the load testing server.
     """
@@ -71,10 +71,10 @@ def up(count=5, group='staging', zone='us-east-1d'):
     print 'Attempting to call up %i bees.' % count
 
     reservation = ec2_connection.run_instances(
-        image_id='ami-ff17fb96',
+        image_id=image_id,
         min_count=count,
         max_count=count,
-        key_name='frakkingtoasters',
+        key_name=key_name,
         security_groups=[group],
         instance_type=EC2_INSTANCE_TYPE,
         placement=zone)
@@ -219,7 +219,7 @@ def _print_results(results):
     else:
         print 'Mission Assessment: Swarm annihilated target.'
 
-def attack(url, n=10000, c=100):
+def attack(url, n, c):
     """
     Test the root url of this site.
     """
