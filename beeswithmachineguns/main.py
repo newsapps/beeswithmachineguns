@@ -51,18 +51,18 @@ commands:
 
     up_group.add_option('-s', '--servers', metavar="SERVERS", nargs=1,
                         action='store', dest='servers', type='int', default=5,
-                        help="number of servers to start")
+                        help="number of servers to start (default: 5)")
     up_group.add_option('-g', '--group', metavar="GROUP", nargs=1,
                         action='store', dest='group', type='string', default='staging',
-                        help="the security group to run the instances under")
+                        help="the security group to run the instances under (default: staging)")
     up_group.add_option('-z', '--zone',  metavar="ZONE",  nargs=1,
                         action='store', dest='zone', type='string', default='us-east-1d',
-                        help="the availability zone to start the instances in (e.g. us-east-1d)")
+                        help="the availability zone to start the instances in (default: us-east-1d)")
     up_group.add_option('-i', '--instance',  metavar="INSTANCE",  nargs=1,
                         action='store', dest='instance', type='string', default='ami-ff17fb96',
-                        help="the instance-id to start each server from (e.g. ami-ff17fb96)")
+                        help="the instance-id to start each server from (default ami-ff17fb96)")
     up_group.add_option('-k', '--key',  metavar="KEY",  nargs=1,
-                        action='store', dest='key', type='string', default='frakkingtoasters',
+                        action='store', dest='key', type='string', 
                         help="the ssh key pair name to use to connect to the new servers")
 
     parser.add_option_group(up_group)
@@ -71,11 +71,11 @@ commands:
 
     attack_group.add_option('-n', '--number', metavar="NUMBER", nargs=1,
                         action='store', dest='number', type='int', default=1000,
-                        help="number of total connections to make to the target")
+                        help="number of total connections to make to the target (default: 1000)")
 
     attack_group.add_option('-c', '--concurrent', metavar="CONCURRENT", nargs=1,
                         action='store', dest='concurrent', type='int', default=100,
-                        help="number of concurrent connections to make to the target")
+                        help="number of concurrent connections to make to the target (default: 100)")
 
     attack_group.add_option('-u', '--url', metavar="URL", nargs=1,
                         action='store', dest='url', type='string',
@@ -91,10 +91,13 @@ commands:
     command = args[0]
 
     if command == "up":
+        if not options.key:
+            parser.error('To spin up new instances you need to specify a key-pair name with -k')
+
         bees.up(options.servers, options.group, options.zone, options.instance, options.key)
     elif command == "attack":
-        if 'url' not in options:
-            parser.error("To run an attack you need to specify a url")
+        if not options.url:
+            parser.error("To run an attack you need to specify a url with -u")
         
         bees.attack(options.url, options.number, options.concurrency)
     elif command == "down":
