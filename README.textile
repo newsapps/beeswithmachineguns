@@ -1,16 +1,36 @@
-h1. An Army of Bees with Machine Guns!!!
+h1. Bees with Machine Guns!
 
 h2. Description
 
 A utility for arming (creating) many bees (small EC2 in stances) to attack (load test) targets (web applications).
 
-This application is very alpha / rough / incomplete.
-
 h2. Dependencies
 
-* Boto
-* Fabric
-* Paramiko
+* boto
+* fabric
+* paramiko
+
+Recommended:
+
+* virtualenv
+* virtualenvwrapper
+
+h2. Installation w/ virtualenvwrapper
+
+<pre>
+% cd beeswithmachineguns
+% mkvirtualenv --no-site-packages bees
+% easy_install pip
+% pip install -r requirements.txt
+</pre>
+
+h2. Usage
+
+<pre>
+fab -f bees.py up:5
+fab -f bees.py attack:http://YOUR-DOMAIN.com/,1000,100
+fab -f bees.py down
+</pre>
 
 h2. Tested with
 
@@ -18,4 +38,8 @@ h2. Tested with
 
 h2. Credits
 
-A creation of the News Applications team at the Chicago Tribune--visit us at "http://apps.chicagotribune.com/":http://apps.chicagotribune.com/.
+A creation of the News Applications team at the Chicago Tribune--visit "our blog":http://apps.chicagotribune.com/ and read "our post about the project":http://blog.apps.chicagotribune.com/2010/07/%2008/bees-with-machine-guns/
+
+h2. License
+
+MIT.
