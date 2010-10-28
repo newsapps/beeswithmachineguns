@@ -29,7 +29,7 @@ h2. Installation w/ virtualenvwrapper
 h2. Usage
 
 <pre>
-fab -f bees.py up:5
+fab -f bees.py up:5,staging,us-east-1d
 fab -f bees.py attack:http://YOUR-DOMAIN.com/,1000,100
 fab -f bees.py down
 </pre>
