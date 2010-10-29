@@ -36,13 +36,14 @@ import paramiko
 EC2_INSTANCE_TYPE = 'm1.small'
 STATE_FILENAME = os.path.expanduser('~/.bees')
 
-username = None
-key_name = None
+# Utilities
 
-# Load state from file
+def _read_server_list():
+    instance_ids = []
 
-instance_ids = []
-if os.path.isfile(STATE_FILENAME):
+    if not os.path.isfile(STATE_FILENAME):
+        return (None, None, None)
+
     with open(STATE_FILENAME, 'r') as f:
         username = f.readline().strip()
         key_name = f.readline().strip()
@@ -51,28 +52,27 @@ if os.path.isfile(STATE_FILENAME):
 
         print 'Read %i bees from the roster.' % len(instance_ids)
 
-# Utilities
+    return (username, key_name, instance_ids)
 
-def _write_server_list(instances):
+def _write_server_list(username, key_name, instances):
     with open(STATE_FILENAME, 'w') as f:
         f.write('%s\n' % username)
         f.write('%s\n' % key_name)
         f.write('\n'.join([instance.id for instance in instances]))
+
+def _delete_server_list():
+    os.remove(STATE_FILENAME)
 
 def _get_pem_path(key):
     return os.path.expanduser('~/.ssh/%s.pem' % key)
 
 # Methods
 
-def up(count, group, zone, image_id, login, key):
+def up(count, group, zone, image_id, username, key_name):
     """
     Startup the load testing server.
     """
-    global username
-    global key_name
-
-    username = login 
-    key_name = key
+    existing_username, existing_key_name, instance_ids = _read_server_list()
 
     if instance_ids:
         print 'Bees are already assembled and awaiting orders.'
@@ -80,7 +80,7 @@ def up(count, group, zone, image_id, login, key):
 
     count = int(count)
 
-    pem_path = _get_pem_path()
+    pem_path = _get_pem_path(key_name)
 
     if not os.path.isfile(pem_path):
         print 'No key file found at %s' % pem_path
@@ -111,7 +111,7 @@ def up(count, group, zone, image_id, login, key):
 
         print 'Bee %s is ready for the attack.' % instance.id
 
-    _write_server_list(reservation.instances)
+    _write_server_list(username, key_name, reservation.instances)
 
     print 'The swarm has assembled %i bees.' % len(reservation.instances)
 
@@ -119,6 +119,8 @@ def report():
     """
     Report the status of the load testing servers.
     """
+    username, key_name, instance_ids = _read_server_list()
+
     if not instance_ids:
         print 'No bees have been mobilized.'
         return
@@ -139,6 +141,8 @@ def down():
     """
     Shutdown the load testing server.
     """
+    username, key_name, instance_ids = _read_server_list()
+
     if not instance_ids:
         print 'No bees have been mobilized.'
         return
@@ -154,7 +158,7 @@ def down():
 
     print 'Stood down %i bees.' % len(terminated_instance_ids)
 
-    os.remove(STATE_FILENAME)
+    _delete_server_list()
 
 def _attack(params):
     """
@@ -162,17 +166,14 @@ def _attack(params):
 
     Intended for use with multiprocessing.
     """
-    global username
-    global key_name
-
     print 'Bee %i is joining the swarm.' % params['i']
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(
         params['instance_name'],
-        username=username,
-        key_filename=_get_pem_path(key_name))
+        username=params['username'],
+        key_filename=_get_pem_path(params['key_name']))
 
     print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
 
@@ -248,6 +249,8 @@ def attack(url, n, c):
     """
     Test the root url of this site.
     """
+    username, key_name, instance_ids = _read_server_list()
+
     if not instance_ids:
         print 'No bees are ready to attack.'
         return
@@ -281,6 +284,8 @@ def attack(url, n, c):
             'url': url,
             'concurrent_requests': connections_per_instance,
             'num_requests': requests_per_instance,
+            'username': username,
+            'key_name': key_name,
         })
 
     print 'Stinging URL so it will be cached for the attack.'

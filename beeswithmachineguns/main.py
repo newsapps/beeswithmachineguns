@@ -45,6 +45,7 @@ commands:
   up      Start a batch of load testing servers.
   attack  Begin the attack on a specific url.
   down    Shutdown and deactivate the load testing servers.
+  report  Report the status of the load testing servers.
     """)
 
     up_group = OptionGroup(parser, "up", 
@@ -73,7 +74,8 @@ commands:
 
     parser.add_option_group(up_group)
 
-    attack_group = OptionGroup(parser, "attack", "")
+    attack_group = OptionGroup(parser, "attack", 
+            """Beginning an attack requires only that you specify the -u option with the URL you wish to target.""")
 
     # Required
     attack_group.add_option('-u', '--url', metavar="URL", nargs=1,
@@ -108,6 +110,8 @@ commands:
         bees.attack(options.url, options.number, options.concurrent)
     elif command == "down":
         bees.down()
+    elif command == "report":
+        bees.report()
 
 
 def main():
