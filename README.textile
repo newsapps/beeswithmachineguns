@@ -40,7 +40,7 @@ Bees uses boto to communicate with EC2 and thus supports all the same methods of
 
 h2. Usage
 
-A type bees session looks something like this:
+A typical bees session looks something like this:
 
 <pre>
 bees up -s 4 -g public -k frakkingtoasters
