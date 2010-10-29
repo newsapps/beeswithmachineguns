@@ -33,14 +33,18 @@ import boto
 import paramiko
 
 EC2_INSTANCE_TYPE = 'm1.small'
+STATE_FILENAME = '~/.bees'
 
-STATE_FILENAME = 'theswarm.txt'
+username = None
+key_name = None
 
 # Load state from file
 
 instance_ids = []
 if os.path.isfile(STATE_FILENAME):
     with open(STATE_FILENAME, 'r') as f:
+        username = f.readline()
+        key_name = f.readline()
         text = f.read()
         instance_ids = text.split('\n')
 
@@ -50,14 +54,22 @@ if os.path.isfile(STATE_FILENAME):
 
 def _write_server_list(instances):
     with open(STATE_FILENAME, 'w') as f:
+        f.write('%s\n' % username)
+        f.write('%s\n' % key_name)
         f.write('\n'.join([instance.id for instance in instances]))
 
 # Methods
 
-def up(count, group, zone, image_id, key_name):
+def up(count, group, zone, image_id, login, key):
     """
     Startup the load testing server.
     """
+    global username
+    global key_name
+
+    username = login 
+    key_name = key
+
     if instance_ids:
         print 'Bees are already assembled and awaiting orders.'
         return
@@ -140,14 +152,17 @@ def _attack(params):
 
     Intended for use with multiprocessing.
     """
+    global username
+    global key_name
+
     print 'Bee %i is joining the swarm.' % params['i']
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(
         params['instance_name'],
-        username='newsapps',
-        key_filename='/Users/sk/.ssh/frakkingtoasters.pem')
+        username=username,
+        key_filename=key_name)
 
     print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
 
