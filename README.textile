@@ -2,7 +2,7 @@ h1. Bees with Machine Guns!
 
 h2. Description
 
-A utility for arming (creating) many bees (micro EC2 in stances) to attack (load test) targets (web applications).
+A utility for arming (creating) many bees (micro EC2 instances) to attack (load test) targets (web applications).
 
 h2. Dependencies
 
@@ -12,27 +12,31 @@ h2. Dependencies
 
 h2. Installation for users
 
-<pre>
-% easy_install beeswithmachineguns
-</pre>
+Preferred:
 
 <pre>
-% pip install beeswithmachineguns
+pip beeswithmachineguns
+</pre>
+
+or, if you must:
+
+<pre>
+easy_install beeswithmachineguns
 </pre>
 
 h2. Installation for developers (w/ virtualenv + virtualenvwrapper)
 
 <pre>
-% git clone git://github.com/newsapps/beeswithmachineguns.git
-% cd beeswithmachineguns
-% mkvirtualenv --no-site-packages bees
-% easy_install pip
-% pip install -r requirements.txt
+git clone git://github.com/newsapps/beeswithmachineguns.git
+cd beeswithmachineguns
+mkvirtualenv --no-site-packages bees
+easy_install pip
+pip install -r requirements.txt
 </pre>
 
-h2. EC2 credentials
+h2. Configuring EC2 credentials
 
-Bees uses boto to communicate with EC2 and thus supports all the methods of vstoring credentials that it does.  These include: declaring environment variables, machine-global configuration files, and per-user configuration files. You can read more about these options on "boto's configuration page":http://code.google.com/p/boto/wiki/BotoConfig
+Bees uses boto to communicate with EC2 and thus supports all the same methods of storing credentials that it does.  These include declaring environment variables, machine-global configuration files, and per-user configuration files. You can read more about these options on "boto's configuration page":http://code.google.com/p/boto/wiki/BotoConfig
 
 h2. Usage
 
@@ -44,7 +48,7 @@ bees attack -n 10000 -c 250 -u http://www.ournewwebbyhotness.com/
 bees down
 </pre>
 
-This spins up 4 servers in security group 'public' using the EC2 key 'frakkingtoasters', which is expected to reside in ~/.ssh/.
+This spins up 4 servers in security group 'public' using the EC2 keypair 'frakkingtoasters', whose private key is expected to reside at ~/.ssh/frakkingtoasters.pem.
 
 It then uses those 4 servers to send 10,000 requests, 250 at a time, to attack OurNewWebbyHotness.com.
 
