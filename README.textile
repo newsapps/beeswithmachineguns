@@ -15,7 +15,7 @@ h2. Installation for users
 Preferred:
 
 <pre>
-pip beeswithmachineguns
+pip install beeswithmachineguns
 </pre>
 
 or, if you must:
