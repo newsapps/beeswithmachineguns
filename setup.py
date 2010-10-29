@@ -10,5 +10,6 @@ setup(name='beeswithmachineguns',
       url='http://github.com/newsapps/beeswithmachineguns',
       license='MIT',
       packages=['beeswithmachineguns'],
-      scripts = ['bwmg'],
+      scripts=['bees'],
+      install_requires=['boto', 'paramiko'],
      )
