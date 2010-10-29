@@ -27,6 +27,8 @@ THE SOFTWARE.
 from multiprocessing import Pool
 import os
 import re
+import socket
+import sys
 import time
 import urllib2
 
@@ -168,42 +170,47 @@ def _attack(params):
     """
     print 'Bee %i is joining the swarm.' % params['i']
 
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(
-        params['instance_name'],
-        username=params['username'],
-        key_filename=_get_pem_path(params['key_name']))
+    try:
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(
+            params['instance_name'],
+            username=params['username'],
+            key_filename=_get_pem_path(params['key_name']))
 
-    print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
+        print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
 
-    stdin, stdout, stderr = client.exec_command('ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(url)s' % params)
+        stdin, stdout, stderr = client.exec_command('ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(url)s' % params)
 
-    response = {}
+        response = {}
 
-    ab_results = stdout.read()
-    ms_per_request_search = re.search('Time\ per\ request:\s+([0-9.]+)\ \[ms\]\ \(mean\)', ab_results)
+        ab_results = stdout.read()
+        ms_per_request_search = re.search('Time\ per\ request:\s+([0-9.]+)\ \[ms\]\ \(mean\)', ab_results)
 
-    if not ms_per_request_search:
-        print 'Bee %i lost sight of the target (connection timed out).' % params['i']
+        if not ms_per_request_search:
+            print 'Bee %i lost sight of the target (connection timed out).' % params['i']
+            return None
+
+        requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)
+        fifty_percent_search = re.search('\s+50\%\s+([0-9]+)', ab_results)
+        ninety_percent_search = re.search('\s+90\%\s+([0-9]+)', ab_results)
+        complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
+
+        response['ms_per_request'] = float(ms_per_request_search.group(1))
+        response['requests_per_second'] = float(requests_per_second_search.group(1))
+        response['fifty_percent'] = float(fifty_percent_search.group(1))
+        response['ninety_percent'] = float(ninety_percent_search.group(1))
+        response['complete_requests'] = float(complete_requests_search.group(1))
+
+        print 'Bee %i is out of ammo.' % params['i']
+
+        client.close()
+
+        return response
+    except socket.error:
+        print 'Uh oh, one of your bees is out of the action. He might be taking a little longer than normal to find his machine gun, or may have been terminated without using "bees down".'
         return None
 
-    requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)
-    fifty_percent_search = re.search('\s+50\%\s+([0-9]+)', ab_results)
-    ninety_percent_search = re.search('\s+90\%\s+([0-9]+)', ab_results)
-    complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
-
-    response['ms_per_request'] = float(ms_per_request_search.group(1))
-    response['requests_per_second'] = float(requests_per_second_search.group(1))
-    response['fifty_percent'] = float(fifty_percent_search.group(1))
-    response['ninety_percent'] = float(ninety_percent_search.group(1))
-    response['complete_requests'] = float(complete_requests_search.group(1))
-
-    print 'Bee %i is out of ammo.' % params['i']
-
-    client.close()
-
-    return response
 
 def _print_results(results):
     """
@@ -215,6 +222,10 @@ def _print_results(results):
         print '     Target failed to fully respond to %i bees.' % len(incomplete_results)
 
     complete_results = [r['complete_requests'] for r in results if r is not None]
+
+    if len(complete_results == 0):
+        print '     No results were completed. Apparently your bees are peace-loving hippies.'
+
     total_complete_requests = sum(complete_results)
     print '     Complete requests:\t\t%i' % total_complete_requests
 
@@ -223,6 +234,7 @@ def _print_results(results):
     print '     Requests per second:\t%f [#/sec] (mean)' % mean_requests
 
     complete_results = [r['ms_per_request'] for r in results if r is not None]
+
     mean_response = sum(complete_results) / len(complete_results)
     print '     Time per request:\t\t%f [ms] (mean)' % mean_response
 
@@ -244,7 +256,7 @@ def _print_results(results):
         print 'Mission Assessment: Target severely compromised.'
     else:
         print 'Mission Assessment: Swarm annihilated target.'
-
+    
 def attack(url, n, c):
     """
     Test the root url of this site.
