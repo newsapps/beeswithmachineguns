@@ -34,7 +34,7 @@ def parse_options():
     """
     command = sys,
     parser = OptionParser(usage="""
-bees COMMAND L [options]
+bees COMMAND [options]
 
 Bees with Machine Guns
 
@@ -100,12 +100,12 @@ commands:
         if not options.key:
             parser.error('To spin up new instances you need to specify a key-pair name with -k')
 
-        bees.up(options.servers, options.group, options.zone, options.instance, options.key)
+        bees.up(options.servers, options.group, options.zone, options.instance, options.login, options.key)
     elif command == "attack":
         if not options.url:
             parser.error("To run an attack you need to specify a url with -u")
         
-        bees.attack(options.url, options.number, options.concurrency)
+        bees.attack(options.url, options.number, options.concurrent)
     elif command == "down":
         bees.down()
 

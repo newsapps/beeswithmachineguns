@@ -28,12 +28,13 @@ from multiprocessing import Pool
 import os
 import re
 import time
+import urllib2
 
 import boto
 import paramiko
 
 EC2_INSTANCE_TYPE = 'm1.small'
-STATE_FILENAME = '~/.bees'
+STATE_FILENAME = os.path.expanduser('~/.bees')
 
 username = None
 key_name = None
@@ -43,8 +44,8 @@ key_name = None
 instance_ids = []
 if os.path.isfile(STATE_FILENAME):
     with open(STATE_FILENAME, 'r') as f:
-        username = f.readline()
-        key_name = f.readline()
+        username = f.readline().strip()
+        key_name = f.readline().strip()
         text = f.read()
         instance_ids = text.split('\n')
 
@@ -57,6 +58,9 @@ def _write_server_list(instances):
         f.write('%s\n' % username)
         f.write('%s\n' % key_name)
         f.write('\n'.join([instance.id for instance in instances]))
+
+def _get_pem_path(key):
+    return os.path.expanduser('~/.ssh/%s.pem' % key)
 
 # Methods
 
@@ -75,6 +79,12 @@ def up(count, group, zone, image_id, login, key):
         return
 
     count = int(count)
+
+    pem_path = _get_pem_path()
+
+    if not os.path.isfile(pem_path):
+        print 'No key file found at %s' % pem_path
+        return
 
     print 'Connecting to the hive.'
 
@@ -162,7 +172,7 @@ def _attack(params):
     client.connect(
         params['instance_name'],
         username=username,
-        key_filename=key_name)
+        key_filename=_get_pem_path(key_name))
 
     print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
 
@@ -276,7 +286,7 @@ def attack(url, n, c):
     print 'Stinging URL so it will be cached for the attack.'
 
     # Ping url so it will be cached for testing
-    local('curl %s >> /dev/null' % url)
+    urllib2.urlopen(url)
 
     print 'Organizing the swarm.'
 
