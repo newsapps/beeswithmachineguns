@@ -137,7 +137,7 @@ def report():
         instances.extend(reservation.instances)
 
     for instance in instances:
-        print 'Bee %s: %s' % (instance.id, instance.state)
+        print 'Bee %s: %s @ %s' % (instance.id, instance.state, instance.ip_address)
 
 def down():
     """
@@ -207,43 +207,50 @@ def _attack(params):
         client.close()
 
         return response
-    except socket.error:
-        print 'Uh oh, one of your bees is out of the action. He might be taking a little longer than normal to find his machine gun, or may have been terminated without using "bees down".'
-        return None
+    except socket.error, e:
+        return e
 
 
 def _print_results(results):
     """
     Print summarized load-testing results.
     """
-    incomplete_results = [r for r in results if r is None]
+    timeout_bees = [r for r in results if r is None]
+    exception_bees = [r for r in results if type(r) == socket.error]
+    complete_bees = [r for r in results if r is not None and type(r) != socket.error]
 
-    if incomplete_results:
-        print '     Target failed to fully respond to %i bees.' % len(incomplete_results)
+    num_timeout_bees = len(timeout_bees)
+    num_exception_bees = len(exception_bees)
+    num_complete_bees = len(complete_bees)
 
-    complete_results = [r['complete_requests'] for r in results if r is not None]
+    if exception_bees:
+        print '     %i of your bees didn\'t make it to the action. They might be taking a little longer than normal to find their machine guns, or may have been terminated without using "bees down".' % num_exception_bees
 
-    if len(complete_results == 0):
-        print '     No results were completed. Apparently your bees are peace-loving hippies.'
+    if timeout_bees:
+        print '     Target timed out without fully responding to %i bees.' % num_timeout_bees
 
+    if num_complete_bees == 0:
+        print '     No bees completed the mission. Apparently your bees are peace-loving hippies.'
+        return
+
+    complete_results = [r['complete_requests'] for r in complete_bees]
     total_complete_requests = sum(complete_results)
     print '     Complete requests:\t\t%i' % total_complete_requests
 
-    complete_results = [r['requests_per_second'] for r in results if r is not None]
+    complete_results = [r['requests_per_second'] for r in complete_bees]
     mean_requests = sum(complete_results)
     print '     Requests per second:\t%f [#/sec] (mean)' % mean_requests
 
-    complete_results = [r['ms_per_request'] for r in results if r is not None]
-
-    mean_response = sum(complete_results) / len(complete_results)
+    complete_results = [r['ms_per_request'] for r in complete_bees]
+    mean_response = sum(complete_results) / num_complete_bees
     print '     Time per request:\t\t%f [ms] (mean)' % mean_response
 
-    complete_results = [r['fifty_percent'] for r in results if r is not None]
-    mean_fifty = sum(complete_results) / len(complete_results)
+    complete_results = [r['fifty_percent'] for r in complete_bees]
+    mean_fifty = sum(complete_results) / num_complete_bees
     print '     50%% response time:\t\t%f [ms] (mean)' % mean_fifty
 
-    complete_results = [r['ninety_percent'] for r in results if r is not None]
-    mean_ninety = sum(complete_results) / len(complete_results)
+    complete_results = [r['ninety_percent'] for r in complete_bees]
+    mean_ninety = sum(complete_results) / num_complete_bees
     print '     90%% response time:\t\t%f [ms] (mean)' % mean_ninety
 
     if mean_response < 500:

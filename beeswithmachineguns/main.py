@@ -60,8 +60,8 @@ commands:
                         action='store', dest='servers', type='int', default=5,
                         help="The number of servers to start (default: 5).")
     up_group.add_option('-g', '--group', metavar="GROUP", nargs=1,
-                        action='store', dest='group', type='string', default='staging',
-                        help="The security group to run the instances under (default: staging).")
+                        action='store', dest='group', type='string', default='default',
+                        help="The security group to run the instances under (default: default).")
     up_group.add_option('-z', '--zone',  metavar="ZONE",  nargs=1,
                         action='store', dest='zone', type='string', default='us-east-1d',
                         help="The availability zone to start the instances in (default: us-east-1d).")
@@ -101,6 +101,9 @@ commands:
     if command == "up":
         if not options.key:
             parser.error('To spin up new instances you need to specify a key-pair name with -k')
+
+        if options.group == 'default':
+            print 'New bees will use the "default" EC2 security group. Please note that port 22 (SSH) is not normally open on this group. You will need to use to the EC2 tools to open it before you will be able to attack.'
 
         bees.up(options.servers, options.group, options.zone, options.instance, options.login, options.key)
     elif command == "attack":
