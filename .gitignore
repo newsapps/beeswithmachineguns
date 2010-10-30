@@ -2,3 +2,5 @@
 theswarm.txt
 *.swp
 build
+MANIFEST
+dist
