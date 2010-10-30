@@ -1,8 +1,8 @@
 h1. Bees with Machine Guns!
 
-h2. Description
-
 A utility for arming (creating) many bees (micro EC2 instances) to attack (load test) targets (web applications).
+
+Also, retribution for "this shameful act":http://kottke.org/10/10/tiny-catapult-for-throwing-pies-at-bees against a proud hive.
 
 h2. Dependencies
 
@@ -60,6 +60,14 @@ For complete options type:
 bees -h
 </pre>
 
+h2. The caveat! (PLEASE READ)
+
+(The following was cribbed from our "original blog post about the bees":http://blog.apps.chicagotribune.com/2010/07/08/bees-with-machine-guns/)
+
+If you decide to use the Bees, please keep in mind the following important caveat: they are, more-or-less a distributed denial-of-service attack in a fancy package and, therefore, if you point them at any server you don’t own you will behaving *unethically*, have your Amazon Web Services account *locked-out*, and be *liable* in a court of law for any downtime you cause.
+
+You have been warned.
+
 h2. Bugs
 
 Please log your bugs on the "Github issues tracker":http://github.com/newsapps/beeswithmachineguns/issues
@@ -69,6 +77,8 @@ h2. Credits
 The bees are a creation of the News Applications team at the Chicago Tribune--visit "our blog":http://apps.chicagotribune.com/ and read "our original post about the project":http://blog.apps.chicagotribune.com/2010/07/%2008/bees-with-machine-guns/
 
 Initial refactoring code and inspiration from "Jeff Larson":http://github.com/thejefflarson
+
+Thanks to everyone who reported bugs against the alpha release.
 
 h2. License
 
