@@ -288,8 +288,8 @@ def attack(url, n, c):
         instances.extend(reservation.instances)
 
     instance_count = len(instances)
-    requests_per_instance = int(n) / instance_count
-    connections_per_instance = int(c) / instance_count
+    requests_per_instance = int(float(n) / instance_count)
+    connections_per_instance = int(float(c) / instance_count)
 
     print 'Each of %i bees will fire %s rounds, %s at a time.' % (instance_count, requests_per_instance, connections_per_instance)
 
