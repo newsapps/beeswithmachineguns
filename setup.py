@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='beeswithmachineguns',
-      version='0.1.1',
+      version='0.1.4',
       description='A utility for arming (creating) many bees (micro EC2 instances) to attack (load test) targets (web applications).',
       author='Christopher Groskopf',
       author_email='cgroskopf@tribune.com',
