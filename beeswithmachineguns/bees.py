@@ -105,13 +105,19 @@ def up(count, group, zone, image_id, username, key_name):
 
     print 'Waiting for bees to load their machine guns...'
 
+    instance_ids = []
+
     for instance in reservation.instances:
         while instance.state != 'running':
             print '.'
             time.sleep(5)
             instance.update()
 
+        instance_ids.append(instance.id)
+
         print 'Bee %s is ready for the attack.' % instance.id
+
+    ec2_connection.create_tags(instance_ids, { "Name": "a bee!" })
 
     _write_server_list(username, key_name, reservation.instances)
 
