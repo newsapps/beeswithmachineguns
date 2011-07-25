@@ -25,8 +25,11 @@ THE SOFTWARE.
 """
 
 import bees
+import re
 import sys
 from optparse import OptionParser, OptionGroup
+
+NO_TRAILING_SLASH_REGEX = re.compile(r'^.*?\.\w+$')
 
 def parse_options():
     """
@@ -94,11 +97,11 @@ commands:
     (options, args) = parser.parse_args()
 
     if len(args) <= 0:
-        parser.error("Please enter a command.")
+        parser.error('Please enter a command.')
 
     command = args[0]
 
-    if command == "up":
+    if command == 'up':
         if not options.key:
             parser.error('To spin up new instances you need to specify a key-pair name with -k')
 
@@ -106,14 +109,17 @@ commands:
             print 'New bees will use the "default" EC2 security group. Please note that port 22 (SSH) is not normally open on this group. You will need to use to the EC2 tools to open it before you will be able to attack.'
 
         bees.up(options.servers, options.group, options.zone, options.instance, options.login, options.key)
-    elif command == "attack":
+    elif command == 'attack':
         if not options.url:
-            parser.error("To run an attack you need to specify a url with -u")
-        
+            parser.error('To run an attack you need to specify a url with -u')
+
+        if NO_TRAILING_SLASH_REGEX.match(options.url):
+            parser.error('It appears your URL lacks a trailing slash, this will disorient the bees. Please try again with a trailing slash.')
+
         bees.attack(options.url, options.number, options.concurrent)
-    elif command == "down":
+    elif command == 'down':
         bees.down()
-    elif command == "report":
+    elif command == 'report':
         bees.report()
 
 
