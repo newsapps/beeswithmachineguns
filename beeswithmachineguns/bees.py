@@ -108,6 +108,7 @@ def up(count, group, zone, image_id, username, key_name):
     instance_ids = []
 
     for instance in reservation.instances:
+        instance.update()
         while instance.state != 'running':
             print '.'
             time.sleep(5)
