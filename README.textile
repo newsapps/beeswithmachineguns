@@ -1,4 +1,4 @@
-*ATTENTION:* This project is in need of a maintainer! If you have experience with EC2, Python and load testing tools and would be interested in taking it over, please open a ticket telling us why and we'll get back to you. Thanks!
+*ATTENTION:* This project has several open pull requests and is in need of a maintainer! If you have experience with EC2, Python and load testing tools and would be interested in taking it over, please open a ticket telling us why and we'll get back to you. Thanks!
 
 h1. Bees with Machine Guns!
 
