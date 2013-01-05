@@ -25,11 +25,9 @@ THE SOFTWARE.
 """
 
 import bees
-import re
+from urlparse import urlparse
 
 from optparse import OptionParser, OptionGroup
-
-NO_TRAILING_SLASH_REGEX = re.compile(r'^.*?\.\w+$')
 
 def parse_options():
     """
@@ -112,7 +110,11 @@ commands:
         if not options.url:
             parser.error('To run an attack you need to specify a url with -u')
 
-        if NO_TRAILING_SLASH_REGEX.match(options.url):
+        parsed = urlparse(options.url)
+        if not parsed.scheme:
+            parsed = urlparse("http://" + options.url)
+
+        if not parsed.path:
             parser.error('It appears your URL lacks a trailing slash, this will disorient the bees. Please try again with a trailing slash.')
 
         bees.attack(options.url, options.number, options.concurrent)
