@@ -1,6 +1,7 @@
 *.pyc
 theswarm.txt
 *.swp
+/.idea
 build
 MANIFEST
 dist
