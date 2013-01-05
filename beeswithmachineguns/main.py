@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 import bees
 import re
-import sys
+
 from optparse import OptionParser, OptionGroup
 
 NO_TRAILING_SLASH_REGEX = re.compile(r'^.*?\.\w+$')
@@ -35,7 +35,6 @@ def parse_options():
     """
     Handle the command line arguments for spinning up bees
     """
-    command = sys,
     parser = OptionParser(usage="""
 bees COMMAND [options]
 

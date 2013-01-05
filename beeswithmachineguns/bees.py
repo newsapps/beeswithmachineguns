@@ -28,7 +28,6 @@ from multiprocessing import Pool
 import os
 import re
 import socket
-import sys
 import time
 import urllib2
 
