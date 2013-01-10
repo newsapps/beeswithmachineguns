@@ -269,7 +269,7 @@ def _print_results(results):
         print 'Mission Assessment: Target severely compromised.'
     else:
         print 'Mission Assessment: Swarm annihilated target.'
-    
+
 def attack(url, n, c):
     """
     Test the root url of this site.
@@ -294,6 +294,14 @@ def attack(url, n, c):
         instances.extend(reservation.instances)
 
     instance_count = len(instances)
+
+    if n < instance_count * 2:
+        print 'bees: error: the total number of requests must be at least %d (2x num. instances)' % (instance_count * 2)
+        return
+    if c < instance_count:
+        print 'bees: error: the number of concurrent requests must be at least %d (num. instances)' % instance_count
+        return
+
     requests_per_instance = int(float(n) / instance_count)
     connections_per_instance = int(float(c) / instance_count)
 
