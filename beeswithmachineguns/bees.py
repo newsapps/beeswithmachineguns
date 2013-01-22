@@ -43,7 +43,7 @@ def _read_server_list():
     instance_ids = []
 
     if not os.path.isfile(STATE_FILENAME):
-        return (None, None, None)
+        return (None, None, None, None)
 
     with open(STATE_FILENAME, 'r') as f:
         username = f.readline().strip()
