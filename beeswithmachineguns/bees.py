@@ -43,7 +43,7 @@ def _read_server_list():
     instance_ids = []
 
     if not os.path.isfile(STATE_FILENAME):
-        return (None, None, None)
+        return (None, None, None, None)
 
     with open(STATE_FILENAME, 'r') as f:
         username = f.readline().strip()
@@ -78,7 +78,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name):
     """
     Startup the load testing server.
     """
-    existing_username, existing_key_name, zone, instance_ids = _read_server_list()
+    existing_username, existing_key_name, existing_zone, instance_ids = _read_server_list()
 
     if instance_ids:
         print 'Bees are already assembled and awaiting orders.'
