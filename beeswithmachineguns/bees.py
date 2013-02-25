@@ -191,7 +191,11 @@ def _attack(params):
 
         print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
 
-        stdin, stdout, stderr = client.exec_command('ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" "%(url)s"' % params)
+        params['header_string'] = '';
+        for h in params['headers'].split(';'):
+            params['header_string'] += ' -H ' + h
+        
+        stdin, stdout, stderr = client.exec_command('ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(header_string)s "%(url)s"' % params)
 
         response = {}
 
@@ -275,7 +279,7 @@ def _print_results(results):
     else:
         print 'Mission Assessment: Swarm annihilated target.'
 
-def attack(url, n, c):
+def attack(url, n, c, headers):
     """
     Test the root url of this site.
     """
@@ -324,12 +328,17 @@ def attack(url, n, c):
             'num_requests': requests_per_instance,
             'username': username,
             'key_name': key_name,
+            'headers': headers,
         })
 
     print 'Stinging URL so it will be cached for the attack.'
 
     # Ping url so it will be cached for testing
-    urllib2.urlopen(url)
+    dict_headers = {}
+    if headers is not '':
+        dict_headers = headers = dict(h.split(':') for h in headers.split(';'))
+    request = urllib2.Request(url, headers=dict_headers)
+    urllib2.urlopen(request).read()
 
     print 'Organizing the swarm.'
 

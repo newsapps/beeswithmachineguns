@@ -91,6 +91,9 @@ commands:
     attack_group.add_option('-c', '--concurrent', metavar="CONCURRENT", nargs=1,
                         action='store', dest='concurrent', type='int', default=100,
                         help="The number of concurrent connections to make to the target (default: 100).")
+    attack_group.add_option('-H', '--headers', metavar="HEADERS", nargs=1,
+                        action='store', dest='headers', type='string', default='',
+                        help="HTTP headers to send to the target to attack. Multiple headers should be separated by semi-colons, e.g header1:value1;header2:value2")
 
     parser.add_option_group(attack_group)
 
@@ -120,7 +123,7 @@ commands:
         if not parsed.path:
             parser.error('It appears your URL lacks a trailing slash, this will disorient the bees. Please try again with a trailing slash.')
 
-        bees.attack(options.url, options.number, options.concurrent)
+        bees.attack(options.url, options.number, options.concurrent, options.headers)
     elif command == 'down':
         bees.down()
     elif command == 'report':
