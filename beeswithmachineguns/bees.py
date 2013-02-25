@@ -192,8 +192,9 @@ def _attack(params):
         print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
 
         params['header_string'] = '';
-        for h in params['headers'].split(';'):
-            params['header_string'] += ' -H ' + h
+        if params['headers'] is not '':
+            for h in params['headers'].split(';'):
+                params['header_string'] += ' -H ' + h
         
         stdin, stdout, stderr = client.exec_command('ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(header_string)s "%(url)s"' % params)
 
