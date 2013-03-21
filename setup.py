@@ -12,7 +12,7 @@ setup(name='beeswithmachineguns',
       packages=['beeswithmachineguns'],
       scripts=['bees'],
       install_requires=[
-          'boto==2.0',
+          'boto==2.7.0',
           'paramiko==1.7.7.1'
           ],
       classifiers=[
