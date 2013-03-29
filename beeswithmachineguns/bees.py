@@ -74,7 +74,7 @@ def _get_region(zone):
 
 # Methods
 
-def up(count, group, zone, image_id, instance_type, username, key_name):
+def up(count, group, zone, image_id, instance_type, username, key_name, subnet):
     """
     Startup the load testing server.
     """
@@ -98,14 +98,25 @@ def up(count, group, zone, image_id, instance_type, username, key_name):
 
     print 'Attempting to call up %i bees.' % count
 
-    reservation = ec2_connection.run_instances(
-        image_id=image_id,
-        min_count=count,
-        max_count=count,
-        key_name=key_name,
-        security_groups=[group],
-        instance_type=instance_type,
-        placement=zone)
+    if not subnet:
+        reservation = ec2_connection.run_instances(
+            image_id=image_id,
+            min_count=count,
+            max_count=count,
+            key_name=key_name,
+            security_groups=[group],
+            instance_type=instance_type,
+            placement=zone)
+    else:
+        reservation = ec2_connection.run_instances(
+            image_id=image_id,
+            min_count=count,
+            max_count=count,
+            key_name=key_name,
+            security_group_ids=[group],
+            instance_type=instance_type,
+            placement=zone,
+		    subnet_id=subnet)
 
     print 'Waiting for bees to load their machine guns...'
 
