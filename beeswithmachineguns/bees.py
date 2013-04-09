@@ -208,12 +208,14 @@ def _attack(params):
             return None
 
         requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)
+        failed_requests = re.search('Failed\ requests:\s+([0-9.]+)', ab_results)
         fifty_percent_search = re.search('\s+50\%\s+([0-9]+)', ab_results)
         ninety_percent_search = re.search('\s+90\%\s+([0-9]+)', ab_results)
         complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
 
         response['ms_per_request'] = float(ms_per_request_search.group(1))
         response['requests_per_second'] = float(requests_per_second_search.group(1))
+        response['failed_requests'] = float(failed_requests.group(1))
         response['fifty_percent'] = float(fifty_percent_search.group(1))
         response['ninety_percent'] = float(ninety_percent_search.group(1))
         response['complete_requests'] = float(complete_requests_search.group(1))
@@ -252,6 +254,10 @@ def _print_results(results):
     complete_results = [r['complete_requests'] for r in complete_bees]
     total_complete_requests = sum(complete_results)
     print '     Complete requests:\t\t%i' % total_complete_requests
+
+    complete_results = [r['failed_requests'] for r in complete_bees]
+    total_failed_requests = sum(complete_results)
+    print '     Failed requests:\t\t%i' % total_failed_requests
 
     complete_results = [r['requests_per_second'] for r in complete_bees]
     mean_requests = sum(complete_results)
