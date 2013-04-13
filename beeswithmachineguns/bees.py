@@ -194,7 +194,7 @@ def _attack(params):
         options = ''
         if params['headers'] is not '':
             for h in params['headers'].split(';'):
-                options += ' -H ' + h
+                options += ' -H "%s"' % h
 
         if params['post_file']:
             os.system("scp -q -o 'StrictHostKeyChecking=no' %s %s@%s:/tmp/honeycomb" % (params['post_file'], params['username'], params['instance_name']))
