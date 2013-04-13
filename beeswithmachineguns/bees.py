@@ -316,6 +316,9 @@ def attack(url, n, c, **options):
     if c < instance_count:
         print 'bees: error: the number of concurrent requests must be at least %d (num. instances)' % instance_count
         return
+    if n < c:
+        print 'bees: error: the number of concurrent requests (%d) must be at most the same as number of requests (%d)' % (c, n)
+        return
 
     requests_per_instance = int(float(n) / instance_count)
     connections_per_instance = int(float(c) / instance_count)
