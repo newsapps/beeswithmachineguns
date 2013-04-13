@@ -48,12 +48,12 @@ commands:
   report  Report the status of the load testing servers.
     """)
 
-    up_group = OptionGroup(parser, "up", 
+    up_group = OptionGroup(parser, "up",
         """In order to spin up new servers you will need to specify at least the -k command, which is the name of the EC2 keypair to use for creating and connecting to the new servers. The bees will expect to find a .pem file with this name in ~/.ssh/.""")
 
     # Required
     up_group.add_option('-k', '--key',  metavar="KEY",  nargs=1,
-                        action='store', dest='key', type='string', 
+                        action='store', dest='key', type='string',
                         help="The ssh key pair name to use to connect to the new servers.")
 
     up_group.add_option('-s', '--servers', metavar="SERVERS", nargs=1,
@@ -143,4 +143,3 @@ commands:
 
 def main():
     parse_options()
-
