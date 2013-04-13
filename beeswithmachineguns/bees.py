@@ -191,12 +191,17 @@ def _attack(params):
 
         print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
 
-        params['header_string'] = '';
+        options = ''
         if params['headers'] is not '':
             for h in params['headers'].split(';'):
-                params['header_string'] += ' -H ' + h
-        
-        stdin, stdout, stderr = client.exec_command('ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(header_string)s "%(url)s"' % params)
+                options += ' -H ' + h
+
+        if params['post_file']:
+            os.system("scp -q -o 'StrictHostKeyChecking=no' %s %s@%s:/tmp/honeycomb" % (params['post_file'], params['username'], params['instance_name']))
+            options += ' -k -T "%(mime_type)s; charset=UTF-8" -p /tmp/honeycomb' % params
+
+        benchmark_command = 'ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(options) "%(url)s"' % params
+        stdin, stdout, stderr = client.exec_command(benchmark_command)
 
         response = {}
 
@@ -280,7 +285,7 @@ def _print_results(results):
     else:
         print 'Mission Assessment: Swarm annihilated target.'
 
-def attack(url, n, c, headers):
+def attack(url, n, c, **options):
     """
     Test the root url of this site.
     """
@@ -329,7 +334,9 @@ def attack(url, n, c, headers):
             'num_requests': requests_per_instance,
             'username': username,
             'key_name': key_name,
-            'headers': headers,
+            'headers': options.get('headers', ''),
+            'post_file': options.get('post_file'),
+            'mime_type': options.get('mime_type', ''),
         })
 
     print 'Stinging URL so it will be cached for the attack.'

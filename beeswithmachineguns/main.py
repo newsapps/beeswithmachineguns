@@ -77,14 +77,19 @@ commands:
 
     parser.add_option_group(up_group)
 
-    attack_group = OptionGroup(parser, "attack", 
+    attack_group = OptionGroup(parser, "attack",
             """Beginning an attack requires only that you specify the -u option with the URL you wish to target.""")
 
     # Required
     attack_group.add_option('-u', '--url', metavar="URL", nargs=1,
                         action='store', dest='url', type='string',
                         help="URL of the target to attack.")
-
+    attack_group.add_option('-p', '--post-file',  metavar="POST_FILE",  nargs=1,
+                        action='store', dest='post_file', type='string', default=False,
+                        help="The POST file to deliver with the bee's payload.")
+    attack_group.add_option('-m', '--mime-type',  metavar="MIME_TYPE",  nargs=1,
+                        action='store', dest='mime_type', type='string', default='text/plain',
+                        help="The MIME type to send with the request.")
     attack_group.add_option('-n', '--number', metavar="NUMBER", nargs=1,
                         action='store', dest='number', type='int', default=1000,
                         help="The number of total connections to make to the target (default: 1000).")
@@ -123,7 +128,13 @@ commands:
         if not parsed.path:
             parser.error('It appears your URL lacks a trailing slash, this will disorient the bees. Please try again with a trailing slash.')
 
-        bees.attack(options.url, options.number, options.concurrent, options.headers)
+        additional_options = dict(
+            headers=options.headers,
+            post_file=options.post_file,
+            mime_type=options.mime_type,
+        )
+
+        bees.attack(options.url, options.number, options.concurrent, **additional_options)
     elif command == 'down':
         bees.down()
     elif command == 'report':
