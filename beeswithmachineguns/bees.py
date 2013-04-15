@@ -202,12 +202,17 @@ def _attack(params):
 
         print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
 
-        params['header_string'] = '';
+        options = ''
         if params['headers'] is not '':
             for h in params['headers'].split(';'):
-                params['header_string'] += ' -H ' + h
-        
-        stdin, stdout, stderr = client.exec_command('ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(header_string)s "%(url)s"' % params)
+                options += ' -H "%s"' % h
+
+        if params['post_file']:
+            os.system("scp -q -o 'StrictHostKeyChecking=no' %s %s@%s:/tmp/honeycomb" % (params['post_file'], params['username'], params['instance_name']))
+            options += ' -k -T "%(mime_type)s; charset=UTF-8" -p /tmp/honeycomb' % params
+
+        benchmark_command = 'ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(options) "%(url)s"' % params
+        stdin, stdout, stderr = client.exec_command(benchmark_command)
 
         response = {}
 
@@ -219,12 +224,14 @@ def _attack(params):
             return None
 
         requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)
+        failed_requests = re.search('Failed\ requests:\s+([0-9.]+)', ab_results)
         fifty_percent_search = re.search('\s+50\%\s+([0-9]+)', ab_results)
         ninety_percent_search = re.search('\s+90\%\s+([0-9]+)', ab_results)
         complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
 
         response['ms_per_request'] = float(ms_per_request_search.group(1))
         response['requests_per_second'] = float(requests_per_second_search.group(1))
+        response['failed_requests'] = float(failed_requests.group(1))
         response['fifty_percent'] = float(fifty_percent_search.group(1))
         response['ninety_percent'] = float(ninety_percent_search.group(1))
         response['complete_requests'] = float(complete_requests_search.group(1))
@@ -264,6 +271,10 @@ def _print_results(results):
     total_complete_requests = sum(complete_results)
     print '     Complete requests:\t\t%i' % total_complete_requests
 
+    complete_results = [r['failed_requests'] for r in complete_bees]
+    total_failed_requests = sum(complete_results)
+    print '     Failed requests:\t\t%i' % total_failed_requests
+
     complete_results = [r['requests_per_second'] for r in complete_bees]
     mean_requests = sum(complete_results)
     print '     Requests per second:\t%f [#/sec] (mean)' % mean_requests
@@ -291,7 +302,7 @@ def _print_results(results):
     else:
         print 'Mission Assessment: Swarm annihilated target.'
 
-def attack(url, n, c, headers):
+def attack(url, n, c, **options):
     """
     Test the root url of this site.
     """
@@ -322,6 +333,9 @@ def attack(url, n, c, headers):
     if c < instance_count:
         print 'bees: error: the number of concurrent requests must be at least %d (num. instances)' % instance_count
         return
+    if n < c:
+        print 'bees: error: the number of concurrent requests (%d) must be at most the same as number of requests (%d)' % (c, n)
+        return
 
     requests_per_instance = int(float(n) / instance_count)
     connections_per_instance = int(float(c) / instance_count)
@@ -340,7 +354,9 @@ def attack(url, n, c, headers):
             'num_requests': requests_per_instance,
             'username': username,
             'key_name': key_name,
-            'headers': headers,
+            'headers': options.get('headers', ''),
+            'post_file': options.get('post_file'),
+            'mime_type': options.get('mime_type', ''),
         })
 
     print 'Stinging URL so it will be cached for the attack.'
