@@ -61,7 +61,7 @@ commands:
                         help="The number of servers to start (default: 5).")
     up_group.add_option('-g', '--group', metavar="GROUP", nargs=1,
                         action='store', dest='group', type='string', default='default',
-                        help="The security group to run the instances under (default: default).")
+                        help="The security group(s) to run the instances under (default: default).")
     up_group.add_option('-z', '--zone',  metavar="ZONE",  nargs=1,
                         action='store', dest='zone', type='string', default='us-east-1d',
                         help="The availability zone to start the instances in (default: us-east-1d).")
@@ -74,6 +74,9 @@ commands:
     up_group.add_option('-l', '--login',  metavar="LOGIN",  nargs=1,
                         action='store', dest='login', type='string', default='newsapps',
                         help="The ssh username name to use to connect to the new servers (default: newsapps).")
+    up_group.add_option('-v', '--subnet',  metavar="SUBNET",  nargs=1,
+                        action='store', dest='subnet', type='string', default=None,
+                        help="The vpc subnet id in which the instances should be launched. (default: None).")
 
     parser.add_option_group(up_group)
 
@@ -115,8 +118,8 @@ commands:
 
         if options.group == 'default':
             print 'New bees will use the "default" EC2 security group. Please note that port 22 (SSH) is not normally open on this group. You will need to use to the EC2 tools to open it before you will be able to attack.'
-
-        bees.up(options.servers, options.group, options.zone, options.instance, options.type, options.login, options.key)
+ 
+        bees.up(options.servers, options.group, options.zone, options.instance, options.type, options.login, options.key, options.subnet)
     elif command == 'attack':
         if not options.url:
             parser.error('To run an attack you need to specify a url with -u')
