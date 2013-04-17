@@ -61,7 +61,7 @@ commands:
                         help="The number of servers to start (default: 5).")
     up_group.add_option('-g', '--group', metavar="GROUP", nargs=1,
                         action='store', dest='group', type='string', default='default',
-                        help="The security group to run the instances under. If a vpc subnet is specified using the -v parameter, you must specify security group id's instead of names (default: default).")
+                        help="The security group(s) to run the instances under (default: default).")
     up_group.add_option('-z', '--zone',  metavar="ZONE",  nargs=1,
                         action='store', dest='zone', type='string', default='us-east-1d',
                         help="The availability zone to start the instances in (default: us-east-1d).")
@@ -76,7 +76,7 @@ commands:
                         help="The ssh username name to use to connect to the new servers (default: newsapps).")
     up_group.add_option('-v', '--subnet',  metavar="SUBNET",  nargs=1,
                         action='store', dest='subnet', type='string', default=None,
-                        help="The vpc subnet id in which the instances should be launched. When using this option, you must specify at least one security group id using the -g parameter (default: None).")
+                        help="The vpc subnet id in which the instances should be launched. (default: None).")
 
     parser.add_option_group(up_group)
 
