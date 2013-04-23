@@ -230,13 +230,17 @@ def _attack(params):
         return e
 
 
-def _print_results(results, csv_filename):
+def _print_results(results, params, csv_filename):
     """
     Print summarized load-testing results.
     """
     timeout_bees = [r for r in results if r is None]
     exception_bees = [r for r in results if type(r) == socket.error]
     complete_bees = [r for r in results if r is not None and type(r) != socket.error]
+
+    timeout_bees_params = [p for r,p in zip(results, params) if r is None]
+    exception_bees_params = [p for r,p in zip(results, params) if type(r) == socket.error]
+    complete_bees_params = [p for r,p in zip(results, params) if r is not None and type(r) != socket.error]
 
     num_timeout_bees = len(timeout_bees)
     num_exception_bees = len(exception_bees)
@@ -311,7 +315,6 @@ def _print_results(results, csv_filename):
         cumulative_mass += bin.mass
         while cumulative_mass / total_mass * 100 > len(request_time_cdf):
             request_time_cdf.append(bin.uprbnd)
-    print request_time_cdf, len(request_time_cdf), cumulative_mass, len(request_time_pdf)
 
     print '     50%% responses faster than:\t%f [ms]' % request_time_cdf[49]
     print '     90%% responses faster than:\t%f [ms]' % request_time_cdf[89]
@@ -326,6 +329,19 @@ def _print_results(results, csv_filename):
         print 'Mission Assessment: Target severely compromised.'
     else:
         print 'Mission Assessment: Swarm annihilated target.'
+
+    if csv_filename:
+        with open(csv_filename, 'w') as stream:
+            writer = csv.writer(stream)
+            header = ["% faster than", "all bees [ms]"]
+            for p in complete_bees_params:
+                header.append("bee %(instance_id)s [ms]" % p)
+            writer.writerow(header)
+            for i in range(100):
+                row = [i, request_time_cdf[i]]
+                for r in results:
+                    row.append(r['request_time_cdf'][i]["Time in ms"])
+                writer.writerow(row)
     
 def attack(url, n, c, csv_filename):
     """
@@ -389,6 +405,6 @@ def attack(url, n, c, csv_filename):
 
     print 'Offensive complete.'
 
-    _print_results(results, csv_filename)
+    _print_results(results, params, csv_filename)
 
     print 'The swarm is awaiting new orders.'
