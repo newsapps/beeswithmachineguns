@@ -307,12 +307,12 @@ def _print_results(results):
                 proportion = (_tmax - _tmin) / _w
                 if _w > 0.0:
                     bin.mass += proportion * pct_complete * 0.01 / 0.99
-
-    print "total mass", sum(bin.mass for bin in request_time_pdf)
-
-    #         request_time_pdf.append(Bin(i["Time in ms"], j["Time in ms"], mass=0.01*r['complete_requests']/total_complete_requests/0.99))
-    # request_time_pdf.sort(key=operator.attrgetter('lwrbnd'))
-
+    cumulative_mass = 0.0
+    request_time_cdf = [tmin]
+    for bin in request_time_pdf:
+        cumulative_mass += bin.mass
+        if cumulative_mass * 100 > len(request_time_cdf):
+            request_time_cdf.append(bin.uprbnd)
 
     complete_results = [r['fifty_percent'] for r in complete_bees]
     mean_fifty = sum(complete_results) / num_complete_bees
