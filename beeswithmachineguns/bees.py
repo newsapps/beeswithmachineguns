@@ -31,6 +31,7 @@ import socket
 import sys
 import time
 import urllib2
+import csv
 
 import boto
 import paramiko
@@ -186,7 +187,13 @@ def _attack(params):
 
         print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
 
-        stdin, stdout, stderr = client.exec_command('ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(url)s' % params)
+        stdin, stdout, stderr = client.exec_command('tempfile -s .csv')
+        params['csv_filename'] = stdout.read().strip()
+        if not params['csv_filename']:
+            print 'Bee %i lost sight of the target (connection timed out creating csv_filename).' % params['i']
+            return None
+
+        stdin, stdout, stderr = client.exec_command('ab -r -n %(num_requests)s -c %(concurrent_requests)s -e %(csv_filename)s -C "sessionid=NotARealSessionID" %(url)s' % params)
 
         response = {}
 
@@ -194,7 +201,7 @@ def _attack(params):
         ms_per_request_search = re.search('Time\ per\ request:\s+([0-9.]+)\ \[ms\]\ \(mean\)', ab_results)
 
         if not ms_per_request_search:
-            print 'Bee %i lost sight of the target (connection timed out).' % params['i']
+            print 'Bee %i lost sight of the target (connection timed out running ab).' % params['i']
             return None
 
         requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)
@@ -207,6 +214,15 @@ def _attack(params):
         response['fifty_percent'] = float(fifty_percent_search.group(1))
         response['ninety_percent'] = float(ninety_percent_search.group(1))
         response['complete_requests'] = float(complete_requests_search.group(1))
+
+        stdin, stdout, stderr = client.exec_command('cat %(csv_filename)s' % params)
+        response['request_time_cdf'] = [row for row in csv.DictReader(stdout)]
+        if not response['request_time_cdf']:
+            print 'Bee %i lost sight of the target (connection timed out reading csv).' % params['i']
+            return None
+
+        from pprint import pprint
+        pprint(response)
 
         print 'Bee %i is out of ammo.' % params['i']
 
