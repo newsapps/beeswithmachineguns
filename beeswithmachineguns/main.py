@@ -91,6 +91,9 @@ commands:
     attack_group.add_option('-c', '--concurrent', metavar="CONCURRENT", nargs=1,
                         action='store', dest='concurrent', type='int', default=100,
                         help="The number of concurrent connections to make to the target (default: 100).")
+    attack_group.add_option('-e', '--csv', metavar="FILENAME", nargs=1,
+                        action='store', dest='csv_filename', type='string', default='',
+                        help="Store the distribution of results in a csv file for all completed bees (default: '').")
 
     parser.add_option_group(attack_group)
 
@@ -116,7 +119,7 @@ commands:
         if NO_TRAILING_SLASH_REGEX.match(options.url):
             parser.error('It appears your URL lacks a trailing slash, this will disorient the bees. Please try again with a trailing slash.')
 
-        bees.attack(options.url, options.number, options.concurrent)
+        bees.attack(options.url, options.number, options.concurrent, options.csv_filename)
     elif command == 'down':
         bees.down()
     elif command == 'report':

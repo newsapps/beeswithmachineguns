@@ -324,12 +324,18 @@ def _print_results(results):
     else:
         print 'Mission Assessment: Swarm annihilated target.'
     
-def attack(url, n, c):
+def attack(url, n, c, csv_filename):
     """
     Test the root url of this site.
     """
     username, key_name, instance_ids = _read_server_list()
 
+    if csv_filename:
+        try:
+            stream = open(csv_filename, 'w')
+        except IOError, e:
+            raise IOError("Specified csv_filename='%s' is not writable. Check permissions or specify a different filename and try again." % csv_filename)
+    
     if not instance_ids:
         print 'No bees are ready to attack.'
         return
