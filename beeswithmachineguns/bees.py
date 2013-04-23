@@ -314,6 +314,9 @@ def _print_results(results):
         if cumulative_mass * 100 > len(request_time_cdf):
             request_time_cdf.append(bin.uprbnd)
 
+    print '     50%% responses faster than:\t%f [ms]' % request_time_cdf[49]
+    print '     90%% responses faster than:\t%f [ms]' % request_time_cdf[89]
+
     complete_results = [r['fifty_percent'] for r in complete_bees]
     mean_fifty = sum(complete_results) / num_complete_bees
     print '     50%% response time:\t\t%f [ms] (mean)' % mean_fifty
