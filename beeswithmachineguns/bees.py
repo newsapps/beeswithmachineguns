@@ -230,7 +230,7 @@ def _attack(params):
         return e
 
 
-def _print_results(results):
+def _print_results(results, csv_filename):
     """
     Print summarized load-testing results.
     """
@@ -295,20 +295,23 @@ def _print_results(results):
             bmin = int(math.log(i["Time in ms"]/tmin)/math.log(factor))
             bmax = int(math.log(j["Time in ms"]/tmin)/math.log(factor))
             bmax = min(nbins-1, bmax)
+            s = 0.0
             for b in range(bmin, bmax+1):
                 bin = request_time_pdf[b]
                 _tmin = max(bin.lwrbnd, i["Time in ms"]) # overlapping boundary
                 _tmax = min(bin.uprbnd, j["Time in ms"]) # overlapping boundary
                 _w = j["Time in ms"] - i["Time in ms"]
-                proportion = (_tmax - _tmin) / _w
                 if _w > 0.0:
-                    bin.mass += proportion * pct_complete * 0.01 / 0.99
+                    proportion = (_tmax - _tmin) / _w
+                    bin.mass += proportion * pct_complete * 0.01
+    total_mass = sum(b.mass for b in request_time_pdf)
     cumulative_mass = 0.0
     request_time_cdf = [tmin]
     for bin in request_time_pdf:
         cumulative_mass += bin.mass
-        if cumulative_mass * 100 > len(request_time_cdf):
+        while cumulative_mass / total_mass * 100 > len(request_time_cdf):
             request_time_cdf.append(bin.uprbnd)
+    print request_time_cdf, len(request_time_cdf), cumulative_mass, len(request_time_pdf)
 
     print '     50%% responses faster than:\t%f [ms]' % request_time_cdf[49]
     print '     90%% responses faster than:\t%f [ms]' % request_time_cdf[89]
@@ -386,6 +389,6 @@ def attack(url, n, c, csv_filename):
 
     print 'Offensive complete.'
 
-    _print_results(results)
+    _print_results(results, csv_filename)
 
     print 'The swarm is awaiting new orders.'
