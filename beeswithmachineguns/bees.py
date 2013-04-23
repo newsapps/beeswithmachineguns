@@ -32,6 +32,7 @@ import sys
 import time
 import urllib2
 import csv
+import math
 
 import boto
 import paramiko
@@ -216,7 +217,10 @@ def _attack(params):
         response['complete_requests'] = float(complete_requests_search.group(1))
 
         stdin, stdout, stderr = client.exec_command('cat %(csv_filename)s' % params)
-        response['request_time_cdf'] = [row for row in csv.DictReader(stdout)]
+        response['request_time_cdf'] = []
+        for row in csv.DictReader(stdout):
+            row["Time in ms"] = float(row["Time in ms"])
+            response['request_time_cdf'].append(row)
         if not response['request_time_cdf']:
             print 'Bee %i lost sight of the target (connection timed out reading csv).' % params['i']
             return None
@@ -263,6 +267,52 @@ def _print_results(results):
     complete_results = [r['ms_per_request'] for r in complete_bees]
     mean_response = sum(complete_results) / num_complete_bees
     print '     Time per request:\t\t%f [ms] (mean of bees)' % mean_response
+
+    # Recalculate the global cdf based on the csv files collected from
+    # ab. First need to calculate the probability density function to
+    # back out the cdf and get the 50% and 90% values. Since values
+    # can vary over several orders of magnitude, use logarithmic
+    # binning here.
+    tmin = min(r['request_time_cdf'][0]['Time in ms'] for r in complete_bees)
+    tmax = max(r['request_time_cdf'][-1]['Time in ms'] for r in complete_bees)
+    ltmin, ltmax = map(math.log, [tmin, tmax])
+    class Bin(object):
+        def __init__(self, lwrbnd, uprbnd, mass=0.0):
+            self.lwrbnd = lwrbnd
+            self.uprbnd = uprbnd
+            self.mass = mass
+        def width(self):
+            return self.uprbnd - self.lwrbnd
+    request_time_pdf = []
+    nbins = 1000
+    factor = math.exp((ltmax-ltmin)/nbins)
+    lwrbnd = tmin
+    for b in range(nbins):
+        # lwrbnd = tmin*factor**b
+        # uprbnd = tmax*factor**(b+1)
+        uprbnd = lwrbnd * factor
+        request_time_pdf.append(Bin(lwrbnd, uprbnd))
+        lwrbnd = uprbnd
+    for r in complete_bees:
+        pct_complete = float(r["complete_requests"]) / total_complete_requests
+        for i, j in zip(r['request_time_cdf'][:-1], r['request_time_cdf'][1:]):
+            bmin = int(math.log(i["Time in ms"]/tmin)/math.log(factor))
+            bmax = int(math.log(j["Time in ms"]/tmin)/math.log(factor))
+            bmax = min(nbins-1, bmax)
+            for b in range(bmin, bmax+1):
+                bin = request_time_pdf[b]
+                _tmin = max(bin.lwrbnd, i["Time in ms"]) # overlapping boundary
+                _tmax = min(bin.uprbnd, j["Time in ms"]) # overlapping boundary
+                _w = j["Time in ms"] - i["Time in ms"]
+                proportion = (_tmax - _tmin) / _w
+                if _w > 0.0:
+                    bin.mass += proportion * pct_complete * 0.01 / 0.99
+
+    print "total mass", sum(bin.mass for bin in request_time_pdf)
+
+    #         request_time_pdf.append(Bin(i["Time in ms"], j["Time in ms"], mass=0.01*r['complete_requests']/total_complete_requests/0.99))
+    # request_time_pdf.sort(key=operator.attrgetter('lwrbnd'))
+
 
     complete_results = [r['fifty_percent'] for r in complete_bees]
     mean_fifty = sum(complete_results) / num_complete_bees
