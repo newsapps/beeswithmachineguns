@@ -221,9 +221,6 @@ def _attack(params):
             print 'Bee %i lost sight of the target (connection timed out reading csv).' % params['i']
             return None
 
-        from pprint import pprint
-        pprint(response)
-
         print 'Bee %i is out of ammo.' % params['i']
 
         client.close()
@@ -261,11 +258,11 @@ def _print_results(results):
 
     complete_results = [r['requests_per_second'] for r in complete_bees]
     mean_requests = sum(complete_results)
-    print '     Requests per second:\t%f [#/sec] (mean)' % mean_requests
+    print '     Requests per second:\t%f [#/sec]' % mean_requests
 
     complete_results = [r['ms_per_request'] for r in complete_bees]
     mean_response = sum(complete_results) / num_complete_bees
-    print '     Time per request:\t\t%f [ms] (mean)' % mean_response
+    print '     Time per request:\t\t%f [ms] (mean of bees)' % mean_response
 
     complete_results = [r['fifty_percent'] for r in complete_bees]
     mean_fifty = sum(complete_results) / num_complete_bees
