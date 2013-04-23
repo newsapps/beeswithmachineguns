@@ -206,14 +206,10 @@ def _attack(params):
             return None
 
         requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)
-        fifty_percent_search = re.search('\s+50\%\s+([0-9]+)', ab_results)
-        ninety_percent_search = re.search('\s+90\%\s+([0-9]+)', ab_results)
         complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
 
         response['ms_per_request'] = float(ms_per_request_search.group(1))
         response['requests_per_second'] = float(requests_per_second_search.group(1))
-        response['fifty_percent'] = float(fifty_percent_search.group(1))
-        response['ninety_percent'] = float(ninety_percent_search.group(1))
         response['complete_requests'] = float(complete_requests_search.group(1))
 
         stdin, stdout, stderr = client.exec_command('cat %(csv_filename)s' % params)
@@ -316,14 +312,6 @@ def _print_results(results):
 
     print '     50%% responses faster than:\t%f [ms]' % request_time_cdf[49]
     print '     90%% responses faster than:\t%f [ms]' % request_time_cdf[89]
-
-    complete_results = [r['fifty_percent'] for r in complete_bees]
-    mean_fifty = sum(complete_results) / num_complete_bees
-    print '     50%% response time:\t\t%f [ms] (mean)' % mean_fifty
-
-    complete_results = [r['ninety_percent'] for r in complete_bees]
-    mean_ninety = sum(complete_results) / num_complete_bees
-    print '     90%% response time:\t\t%f [ms] (mean)' % mean_ninety
 
     if mean_response < 500:
         print 'Mission Assessment: Target crushed bee offensive.'
