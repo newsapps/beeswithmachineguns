@@ -33,6 +33,7 @@ import time
 import urllib2
 import csv
 import math
+import random
 
 import boto
 import paramiko
@@ -229,7 +230,6 @@ def _attack(params):
     except socket.error, e:
         return e
 
-
 def _print_results(results, params, csv_filename):
     """
     Print summarized load-testing results.
@@ -269,52 +269,21 @@ def _print_results(results, params, csv_filename):
     print '     Time per request:\t\t%f [ms] (mean of bees)' % mean_response
 
     # Recalculate the global cdf based on the csv files collected from
-    # ab. First need to calculate the probability density function to
-    # back out the cdf and get the 50% and 90% values. Since values
-    # can vary over several orders of magnitude, use logarithmic
-    # binning here.
-    tmin = min(r['request_time_cdf'][0]['Time in ms'] for r in complete_bees)
-    tmax = max(r['request_time_cdf'][-1]['Time in ms'] for r in complete_bees)
-    ltmin, ltmax = map(math.log, [tmin, tmax])
-    class Bin(object):
-        def __init__(self, lwrbnd, uprbnd, mass=0.0):
-            self.lwrbnd = lwrbnd
-            self.uprbnd = uprbnd
-            self.mass = mass
-        def width(self):
-            return self.uprbnd - self.lwrbnd
-    request_time_pdf = []
-    nbins = 1000
-    factor = math.exp((ltmax-ltmin)/nbins)
-    lwrbnd = tmin
-    for b in range(nbins):
-        # lwrbnd = tmin*factor**b
-        # uprbnd = tmax*factor**(b+1)
-        uprbnd = lwrbnd * factor
-        request_time_pdf.append(Bin(lwrbnd, uprbnd))
-        lwrbnd = uprbnd
-    for r in complete_bees:
-        pct_complete = float(r["complete_requests"]) / total_complete_requests
-        for i, j in zip(r['request_time_cdf'][:-1], r['request_time_cdf'][1:]):
-            bmin = int(math.log(i["Time in ms"]/tmin)/math.log(factor))
-            bmax = int(math.log(j["Time in ms"]/tmin)/math.log(factor))
-            bmax = min(nbins-1, bmax)
-            s = 0.0
-            for b in range(bmin, bmax+1):
-                bin = request_time_pdf[b]
-                _tmin = max(bin.lwrbnd, i["Time in ms"]) # overlapping boundary
-                _tmax = min(bin.uprbnd, j["Time in ms"]) # overlapping boundary
-                _w = j["Time in ms"] - i["Time in ms"]
-                if _w > 0.0:
-                    proportion = (_tmax - _tmin) / _w
-                    bin.mass += proportion * pct_complete * 0.01
-    total_mass = sum(b.mass for b in request_time_pdf)
-    cumulative_mass = 0.0
-    request_time_cdf = [tmin]
-    for bin in request_time_pdf:
-        cumulative_mass += bin.mass
-        while cumulative_mass / total_mass * 100 > len(request_time_cdf):
-            request_time_cdf.append(bin.uprbnd)
+    # ab. Can do this by sampling the request_time_cdfs for each of
+    # the completed bees in proportion to the number of
+    # complete_requests they have
+    n_final_sample = 100
+    sample_size = 100*n_final_sample
+    n_per_bee = [int(r['complete_requests']/total_complete_requests*sample_size)
+                 for r in complete_bees]
+    sample_response_times = []
+    for n, r in zip(n_per_bee, complete_bees):
+        cdf = r['request_time_cdf']
+        for i in range(n):
+            j = int(random.random()*len(cdf))
+            sample_response_times.append(cdf[j]["Time in ms"])
+    sample_response_times.sort()
+    request_time_cdf = sample_response_times[0:sample_size:sample_size/n_final_sample]
 
     print '     50%% responses faster than:\t%f [ms]' % request_time_cdf[49]
     print '     90%% responses faster than:\t%f [ms]' % request_time_cdf[89]
