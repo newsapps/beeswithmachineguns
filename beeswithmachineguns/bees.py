@@ -30,6 +30,9 @@ import re
 import socket
 import time
 import urllib2
+import csv
+import math
+import random
 
 import boto
 import boto.ec2
@@ -210,6 +213,14 @@ def _attack(params):
             for h in params['headers'].split(';'):
                 options += ' -H "%s"' % h
 
+        stdin, stdout, stderr = client.exec_command('tempfile -s .csv')
+        params['csv_filename'] = stdout.read().strip()
+        if params['csv_filename']:
+            options += ' -e %(csv_filename)s' % params
+        else:
+            print 'Bee %i lost sight of the target (connection timed out creating csv_filename).' % params['i']
+            return None
+            
         if params['post_file']:
             os.system("scp -q -o 'StrictHostKeyChecking=no' %s %s@%s:/tmp/honeycomb" % (params['post_file'], params['username'], params['instance_name']))
             options += ' -k -T "%(mime_type)s; charset=UTF-8" -p /tmp/honeycomb' % params
@@ -223,21 +234,26 @@ def _attack(params):
         ms_per_request_search = re.search('Time\ per\ request:\s+([0-9.]+)\ \[ms\]\ \(mean\)', ab_results)
 
         if not ms_per_request_search:
-            print 'Bee %i lost sight of the target (connection timed out).' % params['i']
+            print 'Bee %i lost sight of the target (connection timed out running ab).' % params['i']
             return None
 
         requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)
         failed_requests = re.search('Failed\ requests:\s+([0-9.]+)', ab_results)
-        fifty_percent_search = re.search('\s+50\%\s+([0-9]+)', ab_results)
-        ninety_percent_search = re.search('\s+90\%\s+([0-9]+)', ab_results)
         complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
 
         response['ms_per_request'] = float(ms_per_request_search.group(1))
         response['requests_per_second'] = float(requests_per_second_search.group(1))
         response['failed_requests'] = float(failed_requests.group(1))
-        response['fifty_percent'] = float(fifty_percent_search.group(1))
-        response['ninety_percent'] = float(ninety_percent_search.group(1))
         response['complete_requests'] = float(complete_requests_search.group(1))
+
+        stdin, stdout, stderr = client.exec_command('cat %(csv_filename)s' % params)
+        response['request_time_cdf'] = []
+        for row in csv.DictReader(stdout):
+            row["Time in ms"] = float(row["Time in ms"])
+            response['request_time_cdf'].append(row)
+        if not response['request_time_cdf']:
+            print 'Bee %i lost sight of the target (connection timed out reading csv).' % params['i']
+            return None
 
         print 'Bee %i is out of ammo.' % params['i']
 
@@ -247,14 +263,17 @@ def _attack(params):
     except socket.error, e:
         return e
 
-
-def _print_results(results):
+def _print_results(results, params, csv_filename):
     """
     Print summarized load-testing results.
     """
     timeout_bees = [r for r in results if r is None]
     exception_bees = [r for r in results if type(r) == socket.error]
     complete_bees = [r for r in results if r is not None and type(r) != socket.error]
+
+    timeout_bees_params = [p for r,p in zip(results, params) if r is None]
+    exception_bees_params = [p for r,p in zip(results, params) if type(r) == socket.error]
+    complete_bees_params = [p for r,p in zip(results, params) if r is not None and type(r) != socket.error]
 
     num_timeout_bees = len(timeout_bees)
     num_exception_bees = len(exception_bees)
@@ -280,19 +299,31 @@ def _print_results(results):
 
     complete_results = [r['requests_per_second'] for r in complete_bees]
     mean_requests = sum(complete_results)
-    print '     Requests per second:\t%f [#/sec] (mean)' % mean_requests
+    print '     Requests per second:\t%f [#/sec]' % mean_requests
 
     complete_results = [r['ms_per_request'] for r in complete_bees]
     mean_response = sum(complete_results) / num_complete_bees
-    print '     Time per request:\t\t%f [ms] (mean)' % mean_response
+    print '     Time per request:\t\t%f [ms] (mean of bees)' % mean_response
 
-    complete_results = [r['fifty_percent'] for r in complete_bees]
-    mean_fifty = sum(complete_results) / num_complete_bees
-    print '     50%% response time:\t\t%f [ms] (mean)' % mean_fifty
+    # Recalculate the global cdf based on the csv files collected from
+    # ab. Can do this by sampling the request_time_cdfs for each of
+    # the completed bees in proportion to the number of
+    # complete_requests they have
+    n_final_sample = 100
+    sample_size = 100*n_final_sample
+    n_per_bee = [int(r['complete_requests']/total_complete_requests*sample_size)
+                 for r in complete_bees]
+    sample_response_times = []
+    for n, r in zip(n_per_bee, complete_bees):
+        cdf = r['request_time_cdf']
+        for i in range(n):
+            j = int(random.random()*len(cdf))
+            sample_response_times.append(cdf[j]["Time in ms"])
+    sample_response_times.sort()
+    request_time_cdf = sample_response_times[0:sample_size:sample_size/n_final_sample]
 
-    complete_results = [r['ninety_percent'] for r in complete_bees]
-    mean_ninety = sum(complete_results) / num_complete_bees
-    print '     90%% response time:\t\t%f [ms] (mean)' % mean_ninety
+    print '     50%% responses faster than:\t%f [ms]' % request_time_cdf[49]
+    print '     90%% responses faster than:\t%f [ms]' % request_time_cdf[89]
 
     if mean_response < 500:
         print 'Mission Assessment: Target crushed bee offensive.'
@@ -305,12 +336,32 @@ def _print_results(results):
     else:
         print 'Mission Assessment: Swarm annihilated target.'
 
+    if csv_filename:
+        with open(csv_filename, 'w') as stream:
+            writer = csv.writer(stream)
+            header = ["% faster than", "all bees [ms]"]
+            for p in complete_bees_params:
+                header.append("bee %(instance_id)s [ms]" % p)
+            writer.writerow(header)
+            for i in range(100):
+                row = [i, request_time_cdf[i]]
+                for r in results:
+                    row.append(r['request_time_cdf'][i]["Time in ms"])
+                writer.writerow(row)
+    
 def attack(url, n, c, **options):
     """
     Test the root url of this site.
     """
     username, key_name, zone, instance_ids = _read_server_list()
+    csv_filename = options.get("csv_filename", '')
 
+    if csv_filename:
+        try:
+            stream = open(csv_filename, 'w')
+        except IOError, e:
+            raise IOError("Specified csv_filename='%s' is not writable. Check permissions or specify a different filename and try again." % csv_filename)
+    
     if not instance_ids:
         print 'No bees are ready to attack.'
         return
@@ -379,6 +430,6 @@ def attack(url, n, c, **options):
 
     print 'Offensive complete.'
 
-    _print_results(results)
+    _print_results(results, params, csv_filename)
 
     print 'The swarm is awaiting new orders.'
