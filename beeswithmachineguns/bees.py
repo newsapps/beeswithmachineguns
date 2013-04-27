@@ -355,6 +355,7 @@ def attack(url, n, c, **options):
     Test the root url of this site.
     """
     username, key_name, zone, instance_ids = _read_server_list()
+    headers = options.get('headers', '')
     csv_filename = options.get("csv_filename", '')
 
     if csv_filename:
@@ -409,7 +410,7 @@ def attack(url, n, c, **options):
             'num_requests': requests_per_instance,
             'username': username,
             'key_name': key_name,
-            'headers': options.get('headers', ''),
+            'headers': headers,
             'post_file': options.get('post_file'),
             'mime_type': options.get('mime_type', ''),
         })
