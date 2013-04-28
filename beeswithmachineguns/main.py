@@ -102,6 +102,9 @@ commands:
     attack_group.add_option('-H', '--headers', metavar="HEADERS", nargs=1,
                         action='store', dest='headers', type='string', default='',
                         help="HTTP headers to send to the target to attack. Multiple headers should be separated by semi-colons, e.g header1:value1;header2:value2")
+    attack_group.add_option('-e', '--csv', metavar="FILENAME", nargs=1,
+                        action='store', dest='csv_filename', type='string', default='',
+                        help="Store the distribution of results in a csv file for all completed bees (default: '').")
 
     parser.add_option_group(attack_group)
 
@@ -135,9 +138,11 @@ commands:
             headers=options.headers,
             post_file=options.post_file,
             mime_type=options.mime_type,
+            csv_filename=options.csv_filename,
         )
 
         bees.attack(options.url, options.number, options.concurrent, **additional_options)
+
     elif command == 'down':
         bees.down()
     elif command == 'report':
