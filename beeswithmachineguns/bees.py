@@ -75,18 +75,22 @@ def _get_pem_path(key):
 def _get_region(zone):
     return zone[:-1] # chop off the "d" in the "us-east-1d" to get the "Region"
 	
-def _get_security_group_ids(connection, security_group_names):
-	ids = []
-	# Since we cannot get security groups in a vpc by name, we get all security groups and parse them by name later
-	security_groups = connection.get_all_security_groups()
+def _get_security_group_ids(connection, security_group_names, subnet):
+    ids = []
+    # Since we cannot get security groups in a vpc by name, we get all security groups and parse them by name later
+    security_groups = connection.get_all_security_groups()
 	
-	# Parse the name of each security group and add the id of any match to the group list
-	for group in security_groups:
-		for name in security_group_names:
-			if group.name == name:
-				ids.append(group.id)
+    # Parse the name of each security group and add the id of any match to the group list
+    for group in security_groups:
+        for name in security_group_names:
+            if group.name == name:
+                if subnet == None:
+                    if group.vpc_id == None:
+                        ids.append(group.id)
+                    elif group.vpc_id != None:
+                        ids.append(group.id)
 		
-	return ids
+        return ids
 
 # Methods
 
@@ -119,10 +123,10 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet):
         min_count=count,
         max_count=count,
         key_name=key_name,
-        security_group_ids=_get_security_group_ids(ec2_connection, [group]),
+        security_group_ids=_get_security_group_ids(ec2_connection, [group], subnet),
         instance_type=instance_type,
         placement=zone,
-		subnet_id=subnet)
+        subnet_id=subnet)
 
     print 'Waiting for bees to load their machine guns...'
 
