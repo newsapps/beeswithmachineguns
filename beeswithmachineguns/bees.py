@@ -226,7 +226,8 @@ def _attack(params):
             return None
             
         if params['post_file']:
-            os.system("scp -q -o 'StrictHostKeyChecking=no' %s %s@%s:/tmp/honeycomb" % (params['post_file'], params['username'], params['instance_name']))
+            pem_file_path=_get_pem_path(params['key_name'])
+            os.system("scp -q -o 'StrictHostKeyChecking=no' -i %s %s %s@%s:/tmp/honeycomb" % (pem_file_path, params['post_file'], params['username'], params['instance_name']))
             options += ' -k -T "%(mime_type)s; charset=UTF-8" -p /tmp/honeycomb' % params
 
         params['options'] = options
