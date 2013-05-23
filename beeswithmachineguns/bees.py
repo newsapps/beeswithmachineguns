@@ -210,7 +210,7 @@ def _attack(params):
             username=params['username'],
             key_filename=_get_pem_path(params['key_name']))
 
-        print 'Bee %i is firing his machine gun. Bang bang!' % params['i']
+        print 'Bee %i is firing her machine gun. Bang bang!' % params['i']
 
         options = ''
         if params['headers'] is not '':
