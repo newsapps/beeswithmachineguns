@@ -74,12 +74,12 @@ def _get_pem_path(key):
 
 def _get_region(zone):
     return zone[:-1] # chop off the "d" in the "us-east-1d" to get the "Region"
-	
+    
 def _get_security_group_ids(connection, security_group_names, subnet):
     ids = []
     # Since we cannot get security groups in a vpc by name, we get all security groups and parse them by name later
     security_groups = connection.get_all_security_groups()
-	
+
     # Parse the name of each security group and add the id of any match to the group list
     for group in security_groups:
         for name in security_group_names:
@@ -89,7 +89,7 @@ def _get_security_group_ids(connection, security_group_names, subnet):
                         ids.append(group.id)
                     elif group.vpc_id != None:
                         ids.append(group.id)
-		
+
         return ids
 
 # Methods
@@ -98,6 +98,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet):
     """
     Startup the load testing server.
     """
+
     existing_username, existing_key_name, existing_zone, instance_ids = _read_server_list()
 
     if instance_ids:
@@ -123,7 +124,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet):
         min_count=count,
         max_count=count,
         key_name=key_name,
-        security_group_ids=_get_security_group_ids(ec2_connection, [group], subnet),
+        security_groups=[group] if subnet is None else _get_security_group_ids(ec2_connection, [group], subnet),
         instance_type=instance_type,
         placement=zone,
         subnet_id=subnet)
@@ -215,7 +216,8 @@ def _attack(params):
         options = ''
         if params['headers'] is not '':
             for h in params['headers'].split(';'):
-                options += ' -H "%s"' % h
+                if h != '':
+                    options += ' -H "%s"' % h.strip()
 
         stdin, stdout, stderr = client.exec_command('tempfile -s .csv')
         params['csv_filename'] = stdout.read().strip()
@@ -230,8 +232,14 @@ def _attack(params):
             os.system("scp -q -o 'StrictHostKeyChecking=no' -i %s %s %s@%s:/tmp/honeycomb" % (pem_file_path, params['post_file'], params['username'], params['instance_name']))
             options += ' -k -T "%(mime_type)s; charset=UTF-8" -p /tmp/honeycomb' % params
 
+
+        if params['cookies'] is not '':
+            options += ' -H \"Cookie: %ssessionid=NotARealSessionID;\"' % params['cookies']
+        else:
+            options += '-C \"sessionid=NotARealSessionID\"'
+
         params['options'] = options
-        benchmark_command = 'ab -r -n %(num_requests)s -c %(concurrent_requests)s -C "sessionid=NotARealSessionID" %(options)s "%(url)s"' % params
+        benchmark_command = 'ab -r -n %(num_requests)s -c %(concurrent_requests)s %(options)s "%(url)s"' % params
         stdin, stdout, stderr = client.exec_command(benchmark_command)
 
         response = {}
@@ -362,6 +370,7 @@ def attack(url, n, c, **options):
     username, key_name, zone, instance_ids = _read_server_list()
     headers = options.get('headers', '')
     csv_filename = options.get("csv_filename", '')
+    cookies = options.get('cookies', '')
 
     if csv_filename:
         try:
@@ -416,18 +425,27 @@ def attack(url, n, c, **options):
             'username': username,
             'key_name': key_name,
             'headers': headers,
+            'cookies': cookies,
             'post_file': options.get('post_file'),
-            'mime_type': options.get('mime_type', ''),
+            'mime_type': options.get('mime_type', '')
         })
 
     print 'Stinging URL so it will be cached for the attack.'
 
+    request = urllib2.Request(url, data='')
+    if cookies is not '':
+        request.add_header('Cookie', cookies)
+
     # Ping url so it will be cached for testing
     dict_headers = {}
     if headers is not '':
-        dict_headers = headers = dict(h.split(':') for h in headers.split(';'))
-    request = urllib2.Request(url, headers=dict_headers)
-    urllib2.urlopen(request).read()
+        dict_headers = headers = dict(j.split(':') for j in [i.strip() for i in headers.split(';') if i != ''])
+
+    for key, value in dict_headers.iteritems():
+        request.add_header(key, value)
+
+    response = urllib2.urlopen(request)
+    response.read()
 
     print 'Organizing the swarm.'
 

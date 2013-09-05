@@ -96,6 +96,9 @@ commands:
     attack_group.add_option('-n', '--number', metavar="NUMBER", nargs=1,
                         action='store', dest='number', type='int', default=1000,
                         help="The number of total connections to make to the target (default: 1000).")
+    attack_group.add_option('-C', '--cookies', metavar="COOKIES", nargs=1, action='store', dest='cookies',
+                        type='string', default='',
+                        help='Cookies to send during http requests. The cookies should be passed using standard cookie formatting, separated by semi-colons and assigned with equals signs.')
     attack_group.add_option('-c', '--concurrent', metavar="CONCURRENT", nargs=1,
                         action='store', dest='concurrent', type='int', default=100,
                         help="The number of concurrent connections to make to the target (default: 100).")
@@ -121,7 +124,6 @@ commands:
 
         if options.group == 'default':
             print 'New bees will use the "default" EC2 security group. Please note that port 22 (SSH) is not normally open on this group. You will need to use to the EC2 tools to open it before you will be able to attack.'
- 
         bees.up(options.servers, options.group, options.zone, options.instance, options.type, options.login, options.key, options.subnet)
     elif command == 'attack':
         if not options.url:
@@ -135,6 +137,7 @@ commands:
             parser.error('It appears your URL lacks a trailing slash, this will disorient the bees. Please try again with a trailing slash.')
 
         additional_options = dict(
+            cookies=options.cookies,
             headers=options.headers,
             post_file=options.post_file,
             mime_type=options.mime_type,
