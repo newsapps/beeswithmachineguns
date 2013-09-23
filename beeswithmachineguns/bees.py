@@ -236,7 +236,7 @@ def _attack(params):
         if params['cookies'] is not '':
             options += ' -H \"Cookie: %ssessionid=NotARealSessionID;\"' % params['cookies']
         else:
-            options += '-C \"sessionid=NotARealSessionID\"'
+            options += ' -C \"sessionid=NotARealSessionID\"'
 
         params['options'] = options
         benchmark_command = 'ab -r -n %(num_requests)s -c %(concurrent_requests)s %(options)s "%(url)s"' % params
