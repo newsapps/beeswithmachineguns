@@ -371,6 +371,7 @@ def attack(url, n, c, **options):
     headers = options.get('headers', '')
     csv_filename = options.get("csv_filename", '')
     cookies = options.get('cookies', '')
+    post_file = options.get('post_file', '')
 
     if csv_filename:
         try:
@@ -432,7 +433,21 @@ def attack(url, n, c, **options):
 
     print 'Stinging URL so it will be cached for the attack.'
 
-    request = urllib2.Request(url, data='')
+
+
+    request = urllib2.Request(url)
+    # Need to revisit to support all http verbs.
+    if post_file:
+        try:
+            with open(post_file, 'r') as content_file:
+                content = content_file.read()
+            request.add_data(content)
+        except IOError:
+            print 'bees: error: The post file you provided doesn\'t exist.'
+            return
+
+
+
     if cookies is not '':
         request.add_header('Cookie', cookies)
 
