@@ -433,8 +433,6 @@ def attack(url, n, c, **options):
 
     print 'Stinging URL so it will be cached for the attack.'
 
-
-
     request = urllib2.Request(url)
     # Need to revisit to support all http verbs.
     if post_file:
@@ -445,8 +443,6 @@ def attack(url, n, c, **options):
         except IOError:
             print 'bees: error: The post file you provided doesn\'t exist.'
             return
-
-
 
     if cookies is not '':
         request.add_header('Cookie', cookies)
