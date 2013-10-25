@@ -31,6 +31,7 @@ import socket
 import time
 import urllib2
 import csv
+import sys
 import math
 import random
 
@@ -277,79 +278,54 @@ def _attack(params):
     except socket.error, e:
         return e
 
-def _print_results(results, params, csv_filename):
-    """
-    Print summarized load-testing results.
-    """
-    timeout_bees = [r for r in results if r is None]
-    exception_bees = [r for r in results if type(r) == socket.error]
-    complete_bees = [r for r in results if r is not None and type(r) != socket.error]
 
-    timeout_bees_params = [p for r,p in zip(results, params) if r is None]
-    exception_bees_params = [p for r,p in zip(results, params) if type(r) == socket.error]
-    complete_bees_params = [p for r,p in zip(results, params) if r is not None and type(r) != socket.error]
+def _summarize_results(results, params, csv_filename):
+    summarized_results = dict()
+    summarized_results['timeout_bees'] = [r for r in results if r is None]
+    summarized_results['exception_bees'] = [r for r in results if type(r) == socket.error]
+    summarized_results['complete_bees'] = [r for r in results if r is not None and type(r) != socket.error]
+    summarized_results['timeout_bees_params'] = [p for r, p in zip(results, params) if r is None]
+    summarized_results['exception_bees_params'] = [p for r, p in zip(results, params) if type(r) == socket.error]
+    summarized_results['complete_bees_params'] = [p for r, p in zip(results, params) if r is not None and type(r) != socket.error]
+    summarized_results['num_timeout_bees'] = len(summarized_results['timeout_bees'])
+    summarized_results['num_exception_bees'] = len(summarized_results['exception_bees'])
+    summarized_results['num_complete_bees'] = len(summarized_results['complete_bees'])
 
-    num_timeout_bees = len(timeout_bees)
-    num_exception_bees = len(exception_bees)
-    num_complete_bees = len(complete_bees)
+    complete_results = [r['complete_requests'] for r in summarized_results['complete_bees']]
+    summarized_results['total_complete_requests'] = sum(complete_results)
 
-    if exception_bees:
-        print '     %i of your bees didn\'t make it to the action. They might be taking a little longer than normal to find their machine guns, or may have been terminated without using "bees down".' % num_exception_bees
+    complete_results = [r['failed_requests'] for r in summarized_results['complete_bees']]
+    summarized_results['total_failed_requests'] = sum(complete_results)
 
-    if timeout_bees:
-        print '     Target timed out without fully responding to %i bees.' % num_timeout_bees
+    complete_results = [r['requests_per_second'] for r in summarized_results['complete_bees']]
+    summarized_results['mean_requests'] = sum(complete_results)
 
-    if num_complete_bees == 0:
-        print '     No bees completed the mission. Apparently your bees are peace-loving hippies.'
-        return
+    complete_results = [r['ms_per_request'] for r in summarized_results['complete_bees']]
+    summarized_results['mean_response'] = sum(complete_results) / summarized_results['num_complete_bees']
 
-    complete_results = [r['complete_requests'] for r in complete_bees]
-    total_complete_requests = sum(complete_results)
-    print '     Complete requests:\t\t%i' % total_complete_requests
+    summarized_results['tpr_bounds'] = params[0]['tpr']
+    summarized_results['rps_bounds'] = params[0]['rps']
 
-    complete_results = [r['failed_requests'] for r in complete_bees]
-    total_failed_requests = sum(complete_results)
-    print '     Failed requests:\t\t%i' % total_failed_requests
+    if summarized_results['tpr_bounds'] is not None:
+        if summarized_results['mean_response'] < summarized_results['tpr_bounds']:
+            summarized_results['performance_accepted'] = True
+        else:
+            summarized_results['performance_accepted'] = False
 
-    complete_results = [r['requests_per_second'] for r in complete_bees]
-    mean_requests = sum(complete_results)
-    print '     Requests per second:\t%f [#/sec]' % mean_requests
+    if summarized_results['rps_bounds'] is not None:
+        if summarized_results['mean_requests'] > summarized_results['rps_bounds'] and summarized_results['performance_accepted'] is True or None:
+            summarized_results['performance_accepted'] = True
+        else:
+            summarized_results['performance_accepted'] = False
 
-    complete_results = [r['ms_per_request'] for r in complete_bees]
-    mean_response = sum(complete_results) / num_complete_bees
-    print '     Time per request:\t\t%f [ms] (mean of bees)' % mean_response
+    summarized_results['request_time_cdf'] = _get_request_time_cdf(summarized_results['total_complete_requests'], summarized_results['complete_bees'])
+    if csv_filename:
+        _create_request_time_cdf_csv(results, summarized_results['complete_bees_params'], summarized_results['request_time_cdf'], csv_filename)
 
-    # Recalculate the global cdf based on the csv files collected from
-    # ab. Can do this by sampling the request_time_cdfs for each of
-    # the completed bees in proportion to the number of
-    # complete_requests they have
-    n_final_sample = 100
-    sample_size = 100*n_final_sample
-    n_per_bee = [int(r['complete_requests']/total_complete_requests*sample_size)
-                 for r in complete_bees]
-    sample_response_times = []
-    for n, r in zip(n_per_bee, complete_bees):
-        cdf = r['request_time_cdf']
-        for i in range(n):
-            j = int(random.random()*len(cdf))
-            sample_response_times.append(cdf[j]["Time in ms"])
-    sample_response_times.sort()
-    request_time_cdf = sample_response_times[0:sample_size:sample_size/n_final_sample]
+    return summarized_results
 
-    print '     50%% responses faster than:\t%f [ms]' % request_time_cdf[49]
-    print '     90%% responses faster than:\t%f [ms]' % request_time_cdf[89]
 
-    if mean_response < 500:
-        print 'Mission Assessment: Target crushed bee offensive.'
-    elif mean_response < 1000:
-        print 'Mission Assessment: Target successfully fended off the swarm.'
-    elif mean_response < 1500:
-        print 'Mission Assessment: Target wounded, but operational.'
-    elif mean_response < 2000:
-        print 'Mission Assessment: Target severely compromised.'
-    else:
-        print 'Mission Assessment: Swarm annihilated target.'
-
+def _create_request_time_cdf_csv(results, complete_bees_params, request_time_cdf, csv_filename):
     if csv_filename:
         with open(csv_filename, 'w') as stream:
             writer = csv.writer(stream)
@@ -362,7 +338,73 @@ def _print_results(results, params, csv_filename):
                 for r in results:
                     row.append(r['request_time_cdf'][i]["Time in ms"])
                 writer.writerow(row)
-    
+
+
+def _get_request_time_cdf(total_complete_requests, complete_bees):
+    # Recalculate the global cdf based on the csv files collected from
+    # ab. Can do this by sampling the request_time_cdfs for each of
+    # the completed bees in proportion to the number of
+    # complete_requests they have
+    n_final_sample = 100
+    sample_size = 100 * n_final_sample
+    n_per_bee = [int(r['complete_requests'] / total_complete_requests * sample_size)
+                 for r in complete_bees]
+    sample_response_times = []
+    for n, r in zip(n_per_bee, complete_bees):
+        cdf = r['request_time_cdf']
+        for i in range(n):
+            j = int(random.random() * len(cdf))
+            sample_response_times.append(cdf[j]["Time in ms"])
+    sample_response_times.sort()
+    request_time_cdf = sample_response_times[0:sample_size:sample_size / n_final_sample]
+
+    return request_time_cdf
+
+
+def _print_results(summarized_results):
+    """
+    Print summarized load-testing results.
+    """
+    if summarized_results['exception_bees']:
+        print '     %i of your bees didn\'t make it to the action. They might be taking a little longer than normal to find their machine guns, or may have been terminated without using "bees down".' % summarized_results['num_exception_bees']
+
+    if summarized_results['timeout_bees']:
+        print '     Target timed out without fully responding to %i bees.' % summarized_results['num_timeout_bees']
+
+    if summarized_results['num_complete_bees'] == 0:
+        print '     No bees completed the mission. Apparently your bees are peace-loving hippies.'
+        return
+
+    print '     Complete requests:\t\t%i' % summarized_results['total_complete_requests']
+
+    print '     Failed requests:\t\t%i' % summarized_results['total_failed_requests']
+
+    print '     Requests per second:\t%f [#/sec] (mean of bees)' % summarized_results['mean_requests']
+    if 'rps_bounds' in summarized_results and summarized_results['rps_bounds'] is not None:
+        print '     Requests per second:\t%f [#/sec] (upper bounds)' % summarized_results['rps_bounds']
+
+    print '     Time per request:\t\t%f [ms] (mean of bees)' % summarized_results['mean_response']
+    if 'tpr_bounds' in summarized_results and summarized_results['tpr_bounds'] is not None:
+        print '     Time per request:\t\t%f [ms] (lower bounds)' % summarized_results['tpr_bounds']
+
+    print '     50%% responses faster than:\t%f [ms]' % summarized_results['request_time_cdf'][49]
+    print '     90%% responses faster than:\t%f [ms]' % summarized_results['request_time_cdf'][89]
+
+    if 'performance_accepted' in summarized_results:
+        print '     Performance check:\t\t%s' % summarized_results['performance_accepted']
+
+    if summarized_results['mean_response'] < 500:
+        print 'Mission Assessment: Target crushed bee offensive.'
+    elif summarized_results['mean_response'] < 1000:
+        print 'Mission Assessment: Target successfully fended off the swarm.'
+    elif summarized_results['mean_response'] < 1500:
+        print 'Mission Assessment: Target wounded, but operational.'
+    elif summarized_results['mean_response'] < 2000:
+        print 'Mission Assessment: Target severely compromised.'
+    else:
+        print 'Mission Assessment: Swarm annihilated target.'
+
+
 def attack(url, n, c, **options):
     """
     Test the root url of this site.
@@ -428,7 +470,9 @@ def attack(url, n, c, **options):
             'headers': headers,
             'cookies': cookies,
             'post_file': options.get('post_file'),
-            'mime_type': options.get('mime_type', '')
+            'mime_type': options.get('mime_type', ''),
+            'tpr': options.get('tpr'),
+            'rps': options.get('rps')
         })
 
     print 'Stinging URL so it will be cached for the attack.'
@@ -459,13 +503,18 @@ def attack(url, n, c, **options):
     response.read()
 
     print 'Organizing the swarm.'
-
     # Spin up processes for connecting to EC2 instances
     pool = Pool(len(params))
     results = pool.map(_attack, params)
 
+    summarized_results = _summarize_results(results, params, csv_filename)
     print 'Offensive complete.'
-
-    _print_results(results, params, csv_filename)
+    _print_results(summarized_results)
 
     print 'The swarm is awaiting new orders.'
+
+    if 'performance_accepted' in summarized_results:
+        if summarized_results['performance_accepted'] is False:
+            sys.stderr.write("Your targets performance tests did not meet our standard.\n")
+        else:
+            sys.stdout.write('Your targets performance tests meet our standards, the Queen sends her regards.\n')
