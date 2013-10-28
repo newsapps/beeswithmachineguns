@@ -515,6 +515,8 @@ def attack(url, n, c, **options):
 
     if 'performance_accepted' in summarized_results:
         if summarized_results['performance_accepted'] is False:
-            sys.stderr.write("Your targets performance tests did not meet our standard.\n")
+            print("Your targets performance tests did not meet our standard.")
+            sys.exit(1)
         else:
-            sys.stdout.write('Your targets performance tests meet our standards, the Queen sends her regards.\n')
+            print('Your targets performance tests meet our standards, the Queen sends her regards.')
+            sys.exit(0)
