@@ -74,7 +74,7 @@ def _get_pem_path(key):
     return os.path.expanduser('~/.ssh/%s.pem' % key)
 
 def _get_region(zone):
-    return zone[:-1] # chop off the "d" in the "us-east-1d" to get the "Region"
+    return zone if 'gov' in zone else zone[:-1] # chop off the "d" in the "us-east-1d" to get the "Region"
     
 def _get_security_group_ids(connection, security_group_names, subnet):
     ids = []
@@ -127,7 +127,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet):
         key_name=key_name,
         security_groups=[group] if subnet is None else _get_security_group_ids(ec2_connection, [group], subnet),
         instance_type=instance_type,
-        placement=zone,
+        placement=None if 'gov' in zone else zone,
         subnet_id=subnet)
 
     print 'Waiting for bees to load their machine guns...'
