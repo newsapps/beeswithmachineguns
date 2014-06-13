@@ -113,6 +113,8 @@ commands:
                             help='The upper bounds for time per request. If this option is passed and the target is below the value a 1 will be returned with the report details (default: None).')
     attack_group.add_option('-R', '--rps', metavar='RPS', nargs=1, action='store', dest='rps', default=None, type='float',
                             help='The lower bounds for request per second. If this option is passed and the target is above the value a 1 will be returned with the report details (default: None).')
+    attack_group.add_option('-A', '--basic_auth', metavar='basic_auth', nargs=1, action='store', dest='basic_auth', default='', type='string',
+                            help='BASIC authentication credentials, format auth-username:password (default: None).')
 
     parser.add_option_group(attack_group)
 
@@ -148,7 +150,8 @@ commands:
             mime_type=options.mime_type,
             csv_filename=options.csv_filename,
             tpr=options.tpr,
-            rps=options.rps
+            rps=options.rps,
+            basic_auth=options.basic_auth
         )
 
         bees.attack(options.url, options.number, options.concurrent, **additional_options)

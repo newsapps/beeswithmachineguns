@@ -30,6 +30,7 @@ import re
 import socket
 import time
 import urllib2
+import base64
 import csv
 import sys
 import math
@@ -75,7 +76,7 @@ def _get_pem_path(key):
 
 def _get_region(zone):
     return zone[:-1] # chop off the "d" in the "us-east-1d" to get the "Region"
-    
+
 def _get_security_group_ids(connection, security_group_names, subnet):
     ids = []
     # Since we cannot get security groups in a vpc by name, we get all security groups and parse them by name later
@@ -227,17 +228,19 @@ def _attack(params):
         else:
             print 'Bee %i lost sight of the target (connection timed out creating csv_filename).' % params['i']
             return None
-            
+
         if params['post_file']:
             pem_file_path=_get_pem_path(params['key_name'])
             os.system("scp -q -o 'StrictHostKeyChecking=no' -i %s %s %s@%s:/tmp/honeycomb" % (pem_file_path, params['post_file'], params['username'], params['instance_name']))
             options += ' -k -T "%(mime_type)s; charset=UTF-8" -p /tmp/honeycomb' % params
 
-
         if params['cookies'] is not '':
             options += ' -H \"Cookie: %ssessionid=NotARealSessionID;\"' % params['cookies']
         else:
             options += ' -C \"sessionid=NotARealSessionID\"'
+
+        if params['basic_auth'] is not '':
+            options += ' -A %s' % params['basic_auth']
 
         params['options'] = options
         benchmark_command = 'ab -r -n %(num_requests)s -c %(concurrent_requests)s %(options)s "%(url)s"' % params
@@ -414,13 +417,14 @@ def attack(url, n, c, **options):
     csv_filename = options.get("csv_filename", '')
     cookies = options.get('cookies', '')
     post_file = options.get('post_file', '')
+    basic_auth = options.get('basic_auth', '')
 
     if csv_filename:
         try:
             stream = open(csv_filename, 'w')
         except IOError, e:
             raise IOError("Specified csv_filename='%s' is not writable. Check permissions or specify a different filename and try again." % csv_filename)
-    
+
     if not instance_ids:
         print 'No bees are ready to attack.'
         return
@@ -472,7 +476,8 @@ def attack(url, n, c, **options):
             'post_file': options.get('post_file'),
             'mime_type': options.get('mime_type', ''),
             'tpr': options.get('tpr'),
-            'rps': options.get('rps')
+            'rps': options.get('rps'),
+            'basic_auth': options.get('basic_auth')
         })
 
     print 'Stinging URL so it will be cached for the attack.'
@@ -490,6 +495,10 @@ def attack(url, n, c, **options):
 
     if cookies is not '':
         request.add_header('Cookie', cookies)
+
+    if basic_auth is not '':
+        authentication = base64.encodestring(basic_auth).replace('\n', '')
+        request.add_header('Authorization', 'Basic %s' % authentication)
 
     # Ping url so it will be cached for testing
     dict_headers = {}
