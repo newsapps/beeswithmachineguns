@@ -221,7 +221,7 @@ def _attack(params):
                 if h != '':
                     options += ' -H "%s"' % h.strip()
 
-        stdin, stdout, stderr = client.exec_command('tempfile -s .csv')
+        stdin, stdout, stderr = client.exec_command('mktemp -t XXXXX.csv')
         params['csv_filename'] = stdout.read().strip()
         if params['csv_filename']:
             options += ' -e %(csv_filename)s' % params
