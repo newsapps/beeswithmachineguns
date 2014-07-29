@@ -112,8 +112,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet):
     pem_path = _get_pem_path(key_name)
 
     if not os.path.isfile(pem_path):
-        print 'No key file found at %s' % pem_path
-        return
+        print 'Warning. No key file found for %s. You will need to add this key to your SSH agent to connect.' % pem_path
 
     print 'Connecting to the hive.'
 
@@ -208,10 +207,15 @@ def _attack(params):
     try:
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(
-            params['instance_name'],
-            username=params['username'],
-            key_filename=_get_pem_path(params['key_name']))
+
+        if not os.path.isfile(pem_path):
+            client.load_system_host_keys()
+            client.connect(params['instance_name'], username=params['username'])
+        else:
+            client.connect(
+                params['instance_name'],
+                username=params['username'],
+                key_filename=_get_pem_path(params['key_name']))
 
         print 'Bee %i is firing her machine gun. Bang bang!' % params['i']
 
