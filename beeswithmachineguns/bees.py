@@ -232,7 +232,10 @@ def _attack(params):
         if params['post_file']:
             pem_file_path=_get_pem_path(params['key_name'])
             os.system("scp -q -o 'StrictHostKeyChecking=no' -i %s %s %s@%s:/tmp/honeycomb" % (pem_file_path, params['post_file'], params['username'], params['instance_name']))
-            options += ' -k -T "%(mime_type)s; charset=UTF-8" -p /tmp/honeycomb' % params
+            options += ' -T "%(mime_type)s; charset=UTF-8" -p /tmp/honeycomb' % params
+
+        if params['keep_alive']:
+            options += ' -k'
 
         if params['cookies'] is not '':
             options += ' -H \"Cookie: %ssessionid=NotARealSessionID;\"' % params['cookies']
@@ -417,6 +420,7 @@ def attack(url, n, c, **options):
     csv_filename = options.get("csv_filename", '')
     cookies = options.get('cookies', '')
     post_file = options.get('post_file', '')
+    keep_alive = options.get('keep_alive', False)
     basic_auth = options.get('basic_auth', '')
 
     if csv_filename:
@@ -474,6 +478,7 @@ def attack(url, n, c, **options):
             'headers': headers,
             'cookies': cookies,
             'post_file': options.get('post_file'),
+            'keep_alive': options.get('keep_alive'),
             'mime_type': options.get('mime_type', ''),
             'tpr': options.get('tpr'),
             'rps': options.get('rps'),
