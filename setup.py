@@ -12,8 +12,8 @@ setup(name='beeswithmachineguns',
       packages=['beeswithmachineguns'],
       scripts=['bees'],
       install_requires=[
-          'boto==2.8.0',
-          'paramiko==1.10.1'
+          'boto==2.27.0',
+          'paramiko==1.14.0'
           ],
       classifiers=[
           'Development Status :: 4 - Beta',
