@@ -1,3 +1,2 @@
-boto==2.27.0
+-e git://github.com/boto/boto.git@develop#egg=boto
 paramiko==1.14.0
-
