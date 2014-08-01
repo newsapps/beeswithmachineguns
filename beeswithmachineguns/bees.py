@@ -208,6 +208,7 @@ def _attack(params):
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
+        pem_path = params.get('key_name') and _get_pem_path(params['key_name']) or None
         if not os.path.isfile(pem_path):
             client.load_system_host_keys()
             client.connect(params['instance_name'], username=params['username'])
@@ -215,7 +216,7 @@ def _attack(params):
             client.connect(
                 params['instance_name'],
                 username=params['username'],
-                key_filename=_get_pem_path(params['key_name']))
+                key_filename=pem_path)
 
         print 'Bee %i is firing her machine gun. Bang bang!' % params['i']
 
@@ -225,7 +226,7 @@ def _attack(params):
                 if h != '':
                     options += ' -H "%s"' % h.strip()
 
-        stdin, stdout, stderr = client.exec_command('mktemp -t XXXXX.csv')
+        stdin, stdout, stderr = client.exec_command('mktemp')
         params['csv_filename'] = stdout.read().strip()
         if params['csv_filename']:
             options += ' -e %(csv_filename)s' % params
@@ -538,3 +539,4 @@ def attack(url, n, c, **options):
         else:
             print('Your targets performance tests meet our standards, the Queen sends her regards.')
             sys.exit(0)
+
