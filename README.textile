@@ -34,9 +34,25 @@ easy_install pip
 pip install -r requirements.txt
 </pre>
 
-h2. Configuring EC2 credentials
+h2. Configuring AWS credentials
 
 Bees uses boto to communicate with EC2 and thus supports all the same methods of storing credentials that it does.  These include declaring environment variables, machine-global configuration files, and per-user configuration files. You can read more about these options on "boto's configuration page":http://code.google.com/p/boto/wiki/BotoConfig.
+
+At minimum, create a .boto file in your home directory with the following contents:
+
+<pre>
+[Credentials]
+aws_access_key_id = <your access key>
+aws_secret_access_key = <your secret key>
+</pre>
+
+The credentials used must have sufficient access to EC2.
+
+Make sure the .boto file is only accessible by the current account:
+
+<pre>
+chmod 600 .boto
+</pre>
 
 h2. Usage
 
