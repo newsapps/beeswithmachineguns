@@ -275,7 +275,7 @@ def _attack(params):
                 response['failed_requests_connect'] = float(re.search('Connect:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
                 response['failed_requests_receive'] = float(re.search('Receive:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
                 response['failed_requests_length'] = float(re.search('Length:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
-            response['failed_requests_exceptions'] = float(re.search('Exceptions:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
+                response['failed_requests_exceptions'] = float(re.search('Exceptions:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
 
         
         complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
