@@ -337,7 +337,10 @@ def _summarize_results(results, params, csv_filename):
     summarized_results['mean_requests'] = sum(complete_results)
 
     complete_results = [r['ms_per_request'] for r in summarized_results['complete_bees']]
-    summarized_results['mean_response'] = sum(complete_results) / summarized_results['num_complete_bees']
+    if summarized_results['num_complete_bees'] == 0:
+        summarized_results['mean_response'] = "no bees are complete"
+    else:
+        summarized_results['mean_response'] = sum(complete_results) / summarized_results['num_complete_bees']
 
     summarized_results['tpr_bounds'] = params[0]['tpr']
     summarized_results['rps_bounds'] = params[0]['rps']
