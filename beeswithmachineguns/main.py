@@ -145,6 +145,8 @@ commands:
                 parsed = urlparse("http://" + options.url + "/")
             else:
                 parsed = urlparse(options.url + "/")
+        if not parsed.scheme:
+                parsed = urlparse("http://" + options.url + "/")
         additional_options = dict(
             cookies=options.cookies,
             headers=options.headers,
