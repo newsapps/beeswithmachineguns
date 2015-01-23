@@ -140,12 +140,13 @@ commands:
             parser.error('To run an attack you need to specify a url with -u')
 
         parsed = urlparse(options.url)
+        if "/" not in parsed.path:
+            if not parsed.scheme:
+                parsed = urlparse("http://" + options.url + "/")
+            else:
+                parsed = urlparse(options.url + "/")
         if not parsed.scheme:
-            parsed = urlparse("http://" + options.url)
-
-        if not parsed.path:
-            parser.error('It appears your URL lacks a trailing slash, this will disorient the bees. Please try again with a trailing slash.')
-
+                parsed = urlparse("http://" + options.url)
         additional_options = dict(
             cookies=options.cookies,
             headers=options.headers,
