@@ -29,6 +29,7 @@ import os
 import re
 import socket
 import time
+import urllib
 import urllib2
 import base64
 import csv
@@ -54,7 +55,7 @@ def _read_server_list():
         key_name = f.readline().strip()
         zone = f.readline().strip()
         text = f.read()
-        instance_ids = text.split('\n')
+        instance_ids = [i for i in text.split('\n') if i != '']
 
         print 'Read %i bees from the roster.' % len(instance_ids)
 
@@ -129,6 +130,9 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
             instance_type=instance_type,
             placement=None if 'gov' in zone else zone,
             subnet_id=subnet)
+
+        # it can take a few seconds before the spot requests are fully processed
+        time.sleep(5)
 
         instances = _wait_for_spot_request_fulfillment(ec2_connection, spot_requests)
     else:
@@ -280,7 +284,7 @@ def _attack(params):
             options += ' -k'
 
         if params['cookies'] is not '':
-            options += ' -H \"Cookie: %ssessionid=NotARealSessionID;\"' % params['cookies']
+            options += ' -H \"Cookie: %s;sessionid=NotARealSessionID;\"' % params['cookies']
         else:
             options += ' -C \"sessionid=NotARealSessionID\"'
 
