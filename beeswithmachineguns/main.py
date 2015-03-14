@@ -76,6 +76,9 @@ commands:
     up_group.add_option('-v', '--subnet',  metavar="SUBNET",  nargs=1,
                         action='store', dest='subnet', type='string', default=None,
                         help="The vpc subnet id in which the instances should be launched. (default: None).")
+    up_group.add_option('-b', '--bid', metavar="BID", nargs=1,
+                        action='store', dest='bid', type='float', default=None,
+                        help="The maximum bid price per spot instance (default: None).")
 
     parser.add_option_group(up_group)
 
@@ -134,7 +137,8 @@ commands:
 
         if options.group == 'default':
             print 'New bees will use the "default" EC2 security group. Please note that port 22 (SSH) is not normally open on this group. You will need to use to the EC2 tools to open it before you will be able to attack.'
-        bees.up(options.servers, options.group, options.zone, options.instance, options.type, options.login, options.key, options.subnet)
+
+        bees.up(options.servers, options.group, options.zone, options.instance, options.type, options.login, options.key, options.subnet, options.bid)
     elif command == 'attack':
         if not options.url:
             parser.error('To run an attack you need to specify a url with -u')
@@ -165,7 +169,6 @@ commands:
         bees.down()
     elif command == 'report':
         bees.report()
-
 
 def main():
     parse_options()

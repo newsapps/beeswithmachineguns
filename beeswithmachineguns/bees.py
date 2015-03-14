@@ -29,11 +29,11 @@ import os
 import re
 import socket
 import time
+import urllib
 import urllib2
 import base64
 import csv
 import sys
-import math
 import random
 
 import boto
@@ -55,7 +55,7 @@ def _read_server_list():
         key_name = f.readline().strip()
         zone = f.readline().strip()
         text = f.read()
-        instance_ids = text.split('\n')
+        instance_ids = [i for i in text.split('\n') if i != '']
 
         print 'Read %i bees from the roster.' % len(instance_ids)
 
@@ -96,7 +96,7 @@ def _get_security_group_ids(connection, security_group_names, subnet):
 
 # Methods
 
-def up(count, group, zone, image_id, instance_type, username, key_name, subnet):
+def up(count, group, zone, image_id, instance_type, username, key_name, subnet, bid = None):
     """
     Startup the load testing server.
     """
@@ -118,23 +118,43 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet):
 
     ec2_connection = boto.ec2.connect_to_region(_get_region(zone))
 
-    print 'Attempting to call up %i bees.' % count
+    if bid:
+        print 'Attempting to call up %i spot bees, this can take a while...' % count
 
-    reservation = ec2_connection.run_instances(
-        image_id=image_id,
-        min_count=count,
-        max_count=count,
-        key_name=key_name,
-        security_groups=[group] if subnet is None else _get_security_group_ids(ec2_connection, [group], subnet),
-        instance_type=instance_type,
-        placement=None if 'gov' in zone else zone,
-        subnet_id=subnet)
+        spot_requests = ec2_connection.request_spot_instances(
+            image_id=image_id,
+            price=bid,
+            count=count,
+            key_name=key_name,
+            security_groups=[group] if subnet is None else _get_security_group_ids(ec2_connection, [group], subnet),
+            instance_type=instance_type,
+            placement=None if 'gov' in zone else zone,
+            subnet_id=subnet)
+
+        # it can take a few seconds before the spot requests are fully processed
+        time.sleep(5)
+
+        instances = _wait_for_spot_request_fulfillment(ec2_connection, spot_requests)
+    else:
+        print 'Attempting to call up %i bees.' % count
+
+        reservation = ec2_connection.run_instances(
+            image_id=image_id,
+            min_count=count,
+            max_count=count,
+            key_name=key_name,
+            security_groups=[group] if subnet is None else _get_security_group_ids(ec2_connection, [group], subnet),
+            instance_type=instance_type,
+            placement=None if 'gov' in zone else zone,
+            subnet_id=subnet)
+
+        instances = reservation.instances
 
     print 'Waiting for bees to load their machine guns...'
 
     instance_ids = []
 
-    for instance in reservation.instances:
+    for instance in instances:
         instance.update()
         while instance.state != 'running':
             print '.'
@@ -147,9 +167,9 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet):
 
     ec2_connection.create_tags(instance_ids, { "Name": "a bee!" })
 
-    _write_server_list(username, key_name, zone, reservation.instances)
+    _write_server_list(username, key_name, zone, instances)
 
-    print 'The swarm has assembled %i bees.' % len(reservation.instances)
+    print 'The swarm has assembled %i bees.' % len(instances)
 
 def report():
     """
@@ -195,6 +215,27 @@ def down():
     print 'Stood down %i bees.' % len(terminated_instance_ids)
 
     _delete_server_list()
+
+def _wait_for_spot_request_fulfillment(conn, requests, fulfilled_requests = []):
+    """
+    Wait until all spot requests are fulfilled.
+
+    Once all spot requests are fulfilled, return a list of corresponding spot instances.
+    """
+    if len(requests) == 0:
+        reservations = conn.get_all_instances(instance_ids = [r.instance_id for r in fulfilled_requests])
+        return [r.instances[0] for r in reservations]
+    else:
+        time.sleep(10)
+        print '.'
+
+    requests = conn.get_all_spot_instance_requests(request_ids=[req.id for req in requests])
+    for req in requests:
+        if req.status.code == 'fulfilled':
+            fulfilled_requests.append(req)
+            print "spot bee `{}` joined the swarm.".format(req.instance_id)
+
+    return _wait_for_spot_request_fulfillment(conn, [r for r in requests if r not in fulfilled_requests], fulfilled_requests)
 
 def _attack(params):
     """
@@ -243,7 +284,7 @@ def _attack(params):
             options += ' -k'
 
         if params['cookies'] is not '':
-            options += ' -H \"Cookie: %ssessionid=NotARealSessionID;\"' % params['cookies']
+            options += ' -H \"Cookie: %s;sessionid=NotARealSessionID;\"' % params['cookies']
         else:
             options += ' -C \"sessionid=NotARealSessionID\"'
 
