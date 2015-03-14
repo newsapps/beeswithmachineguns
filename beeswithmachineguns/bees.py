@@ -306,6 +306,19 @@ def _attack(params):
 
         requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)
         failed_requests = re.search('Failed\ requests:\s+([0-9.]+)', ab_results)
+        response['failed_requests_connect'] = 0
+        response['failed_requests_receive'] = 0
+        response['failed_requests_length'] = 0
+        response['failed_requests_exceptions'] = 0
+        if float(failed_requests.group(1)) > 0:
+            failed_requests_detail = re.search('(Connect: [0-9.]+, Receive: [0-9.]+, Length: [0-9.]+, Exceptions: [0-9.]+)', ab_results)
+            if failed_requests_detail:
+                response['failed_requests_connect'] = float(re.search('Connect:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
+                response['failed_requests_receive'] = float(re.search('Receive:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
+                response['failed_requests_length'] = float(re.search('Length:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
+                response['failed_requests_exceptions'] = float(re.search('Exceptions:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
+
+        
         complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
 
         response['ms_per_request'] = float(ms_per_request_search.group(1))
@@ -349,11 +362,26 @@ def _summarize_results(results, params, csv_filename):
     complete_results = [r['failed_requests'] for r in summarized_results['complete_bees']]
     summarized_results['total_failed_requests'] = sum(complete_results)
 
+    complete_results = [r['failed_requests_connect'] for r in summarized_results['complete_bees']]
+    summarized_results['total_failed_requests_connect'] = sum(complete_results)
+
+    complete_results = [r['failed_requests_receive'] for r in summarized_results['complete_bees']]
+    summarized_results['total_failed_requests_receive'] = sum(complete_results)
+
+    complete_results = [r['failed_requests_length'] for r in summarized_results['complete_bees']]
+    summarized_results['total_failed_requests_length'] = sum(complete_results)
+
+    complete_results = [r['failed_requests_exceptions'] for r in summarized_results['complete_bees']]
+    summarized_results['total_failed_requests_exceptions'] = sum(complete_results)
+
     complete_results = [r['requests_per_second'] for r in summarized_results['complete_bees']]
     summarized_results['mean_requests'] = sum(complete_results)
 
     complete_results = [r['ms_per_request'] for r in summarized_results['complete_bees']]
-    summarized_results['mean_response'] = sum(complete_results) / summarized_results['num_complete_bees']
+    if summarized_results['num_complete_bees'] == 0:
+        summarized_results['mean_response'] = "no bees are complete"
+    else:
+        summarized_results['mean_response'] = sum(complete_results) / summarized_results['num_complete_bees']
 
     summarized_results['tpr_bounds'] = params[0]['tpr']
     summarized_results['rps_bounds'] = params[0]['rps']
@@ -430,7 +458,10 @@ def _print_results(summarized_results):
     print '     Complete requests:\t\t%i' % summarized_results['total_complete_requests']
 
     print '     Failed requests:\t\t%i' % summarized_results['total_failed_requests']
-
+    print '          connect:\t\t%i' % summarized_results['total_failed_requests_connect']
+    print '          receive:\t\t%i' % summarized_results['total_failed_requests_receive']
+    print '          length:\t\t%i' % summarized_results['total_failed_requests_length']
+    print '          exceptions:\t\t%i' % summarized_results['total_failed_requests_exceptions']
     print '     Requests per second:\t%f [#/sec] (mean of bees)' % summarized_results['mean_requests']
     if 'rps_bounds' in summarized_results and summarized_results['rps_bounds'] is not None:
         print '     Requests per second:\t%f [#/sec] (upper bounds)' % summarized_results['rps_bounds']
@@ -515,7 +546,7 @@ def attack(url, n, c, **options):
         params.append({
             'i': i,
             'instance_id': instance.id,
-            'instance_name': instance.public_dns_name,
+            'instance_name': instance.private_dns_name if instance.public_dns_name == "" else instance.public_dns_name,
             'url': url,
             'concurrent_requests': connections_per_instance,
             'num_requests': requests_per_instance,
