@@ -414,9 +414,10 @@ def _create_request_time_cdf_csv(results, complete_bees_params, request_time_cdf
                 header.append("bee %(instance_id)s [ms]" % p)
             writer.writerow(header)
             for i in range(100):
-                row = [i, request_time_cdf[i]]
+                row = [i, request_time_cdf[i]] if i < len(request_time_cdf) else [i,float("inf")]
                 for r in results:
-                    row.append(r['request_time_cdf'][i]["Time in ms"])
+                    if r is not None:
+                    	row.append(r['request_time_cdf'][i]["Time in ms"])
                 writer.writerow(row)
 
 
