@@ -35,6 +35,7 @@ import base64
 import csv
 import sys
 import random
+import ssl
 
 import boto
 import boto.ec2
@@ -591,7 +592,8 @@ def attack(url, n, c, **options):
     for key, value in dict_headers.iteritems():
         request.add_header(key, value)
 
-    response = urllib2.urlopen(request)
+    context = ssl._create_unverified_context()
+    response = urllib2.urlopen(request, context=context)
     response.read()
 
     print 'Organizing the swarm.'
