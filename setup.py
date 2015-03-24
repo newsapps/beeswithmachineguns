@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
+
+with open('requirements.txt') as f:
+    required_packages = f.readlines()
 
 setup(name='beeswithmachineguns',
       version='0.1.4',
@@ -11,10 +17,7 @@ setup(name='beeswithmachineguns',
       license='MIT',
       packages=['beeswithmachineguns'],
       scripts=['bees'],
-      install_requires=[
-          'boto==2.27.0',
-          'paramiko==1.14.0'
-          ],
+      install_requires=required_packages,
       classifiers=[
           'Development Status :: 4 - Beta',
           'Environment :: Console',
