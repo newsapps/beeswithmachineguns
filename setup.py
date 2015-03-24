@@ -2,6 +2,9 @@
 
 from distutils.core import setup
 
+with open('requirements.txt') as f:
+    required_packages = f.readlines()
+
 setup(name='beeswithmachineguns',
       version='0.1.4',
       description='A utility for arming (creating) many bees (micro EC2 instances) to attack (load test) targets (web applications).',
@@ -11,10 +14,7 @@ setup(name='beeswithmachineguns',
       license='MIT',
       packages=['beeswithmachineguns'],
       scripts=['bees'],
-      install_requires=[
-          'boto==2.27.0',
-          'paramiko==1.14.0'
-          ],
+      install_requires=required_packages,
       classifiers=[
           'Development Status :: 4 - Beta',
           'Environment :: Console',
