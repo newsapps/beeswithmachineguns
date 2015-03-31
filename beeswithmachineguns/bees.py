@@ -592,8 +592,12 @@ def attack(url, n, c, **options):
     for key, value in dict_headers.iteritems():
         request.add_header(key, value)
 
-    context = ssl._create_unverified_context()
-    response = urllib2.urlopen(request, context=context)
+    if url.lower().startswith("https://") and hasattr(ssl, '_create_unverified_context'):
+        context = ssl._create_unverified_context()
+        response = urllib2.urlopen(request, context=context)
+    else:
+        response = urllib2.urlopen(request)
+
     response.read()
 
     print 'Organizing the swarm.'
