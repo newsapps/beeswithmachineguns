@@ -117,7 +117,19 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
 
     print 'Connecting to the hive.'
 
-    ec2_connection = boto.ec2.connect_to_region(_get_region(zone))
+    try:
+        ec2_connection = boto.ec2.connect_to_region(_get_region(zone))
+    except boto.exception.NoAuthHandlerFound as e:
+        print "Authenciation config error, perhaps you do not have a ~/.boto file with correct permissions?"
+        print e.message
+        return e
+    except Exception as e:
+        print "Unknown error occured:"
+        print e.message
+        return e
+
+    if ec2_connection == None:
+        raise Exception("Invalid zone specified? Unable to connect to region using zone name")
 
     if bid:
         print 'Attempting to call up %i spot bees, this can take a while...' % count
@@ -139,15 +151,19 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
     else:
         print 'Attempting to call up %i bees.' % count
 
-        reservation = ec2_connection.run_instances(
-            image_id=image_id,
-            min_count=count,
-            max_count=count,
-            key_name=key_name,
-            security_groups=[group] if subnet is None else _get_security_group_ids(ec2_connection, [group], subnet),
-            instance_type=instance_type,
-            placement=None if 'gov' in zone else zone,
-            subnet_id=subnet)
+        try:
+            reservation = ec2_connection.run_instances(
+                image_id=image_id,
+                min_count=count,
+                max_count=count,
+                key_name=key_name,
+                security_groups=[group] if subnet is None else _get_security_group_ids(ec2_connection, [group], subnet),
+                instance_type=instance_type,
+                placement=None if 'gov' in zone else zone,
+                subnet_id=subnet)
+        except boto.exception.EC2ResponseError as e:
+            print "Unable to call bees:", e.message
+            return e
 
         instances = reservation.instances
 
@@ -319,7 +335,6 @@ def _attack(params):
                 response['failed_requests_length'] = float(re.search('Length:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
                 response['failed_requests_exceptions'] = float(re.search('Exceptions:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
 
-        
         complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
 
         response['ms_per_request'] = float(ms_per_request_search.group(1))
