@@ -104,11 +104,16 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
 
     existing_username, existing_key_name, existing_zone, instance_ids = _read_server_list()
 
-    if instance_ids:
-        print 'Bees are already assembled and awaiting orders.'
-        return
-
     count = int(count)
+    if instance_ids and existing_username == username and existing_key_name == key_name and existing_zone == zone:
+        if count <= len(instance_ids):
+            print 'Bees are already assembled and awaiting orders.'
+            return
+        else:
+            count -= len(instance_ids)
+    elif instance_ids:
+        print 'Found {} unusable bees.'
+        down()
 
     pem_path = _get_pem_path(key_name)
 
@@ -167,11 +172,16 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
 
         instances = reservation.instances
 
+    if instance_ids:
+        existing_reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
+        existing_instances = [r.instances[0] for r in existing_reservations]
+        map(instances.append, existing_instances)
+
     print 'Waiting for bees to load their machine guns...'
 
-    instance_ids = []
+    instance_ids = instance_ids or []
 
-    for instance in instances:
+    for instance in filter(lambda i: i.state == 'pending', instances):
         instance.update()
         while instance.state != 'running':
             print '.'
