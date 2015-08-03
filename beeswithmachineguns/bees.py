@@ -112,8 +112,9 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
         else:
             count -= len(instance_ids)
     elif instance_ids:
-        print 'Found {} unusable bees.'
-        down()
+        print 'Taking down {} unusable bees.'.format(len(instance_ids))
+        _redirect_stdout('/dev/null', down)
+        existing_username, existing_key_name, existing_zone, instance_ids = _read_server_list()
 
     pem_path = _get_pem_path(key_name)
 
@@ -644,3 +645,9 @@ def attack(url, n, c, **options):
             print('Your targets performance tests meet our standards, the Queen sends her regards.')
             sys.exit(0)
 
+def _redirect_stdout(outfile, func, *args, **kwargs):
+    save_out = sys.stdout
+    with open(outfile, 'w') as redir_out:
+        sys.stdout = redir_out
+        func(*args, **kwargs)
+    sys.stdout = save_out
