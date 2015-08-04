@@ -105,7 +105,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
     existing_username, existing_key_name, existing_zone, instance_ids = _read_server_list()
 
     count = int(count)
-    if instance_ids and existing_username == username and existing_key_name == key_name and existing_zone == zone:
+    if existing_username == username and existing_key_name == key_name and existing_zone == zone:
         # User, key and zone match existing values and instance ids are found on state file
         if count <= len(instance_ids):
             # Count is less than the amount of existing instances. No need to create new ones.
