@@ -106,14 +106,21 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
 
     count = int(count)
     if instance_ids and existing_username == username and existing_key_name == key_name and existing_zone == zone:
+        # User, key and zone match existing values and instance ids are found on state file
         if count <= len(instance_ids):
+            # Count is less than the amount of existing instances. No need to create new ones.
             print 'Bees are already assembled and awaiting orders.'
             return
         else:
+            # Count is greater than the amount of existing instances. Need to create the only the extra instances.
             count -= len(instance_ids)
     elif instance_ids:
+        # Instances found on state file but user, key and/or zone not matching existing value.
+        # State file only stores one user/key/zone config combination so instances are unusable.
         print 'Taking down {} unusable bees.'.format(len(instance_ids))
+        # Redirect prints in down() to devnull to avoid duplicate messages
         _redirect_stdout('/dev/null', down)
+        # down() deletes existing state file so _read_server_list() returns a blank state
         existing_username, existing_key_name, existing_zone, instance_ids = _read_server_list()
 
     pem_path = _get_pem_path(key_name)
