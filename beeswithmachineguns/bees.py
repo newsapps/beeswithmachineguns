@@ -104,11 +104,24 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
 
     existing_username, existing_key_name, existing_zone, instance_ids = _read_server_list()
 
-    if instance_ids:
-        print 'Bees are already assembled and awaiting orders.'
-        return
-
     count = int(count)
+    if existing_username == username and existing_key_name == key_name and existing_zone == zone:
+        # User, key and zone match existing values and instance ids are found on state file
+        if count <= len(instance_ids):
+            # Count is less than the amount of existing instances. No need to create new ones.
+            print 'Bees are already assembled and awaiting orders.'
+            return
+        else:
+            # Count is greater than the amount of existing instances. Need to create the only the extra instances.
+            count -= len(instance_ids)
+    elif instance_ids:
+        # Instances found on state file but user, key and/or zone not matching existing value.
+        # State file only stores one user/key/zone config combination so instances are unusable.
+        print 'Taking down {} unusable bees.'.format(len(instance_ids))
+        # Redirect prints in down() to devnull to avoid duplicate messages
+        _redirect_stdout('/dev/null', down)
+        # down() deletes existing state file so _read_server_list() returns a blank state
+        existing_username, existing_key_name, existing_zone, instance_ids = _read_server_list()
 
     pem_path = _get_pem_path(key_name)
 
@@ -167,11 +180,16 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
 
         instances = reservation.instances
 
+    if instance_ids:
+        existing_reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
+        existing_instances = [r.instances[0] for r in existing_reservations]
+        map(instances.append, existing_instances)
+
     print 'Waiting for bees to load their machine guns...'
 
-    instance_ids = []
+    instance_ids = instance_ids or []
 
-    for instance in instances:
+    for instance in filter(lambda i: i.state == 'pending', instances):
         instance.update()
         while instance.state != 'running':
             print '.'
@@ -634,3 +652,9 @@ def attack(url, n, c, **options):
             print('Your targets performance tests meet our standards, the Queen sends her regards.')
             sys.exit(0)
 
+def _redirect_stdout(outfile, func, *args, **kwargs):
+    save_out = sys.stdout
+    with open(outfile, 'w') as redir_out:
+        sys.stdout = redir_out
+        func(*args, **kwargs)
+    sys.stdout = save_out
