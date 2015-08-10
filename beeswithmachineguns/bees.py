@@ -29,12 +29,13 @@ import os
 import re
 import socket
 import time
+import urllib
 import urllib2
 import base64
 import csv
 import sys
-import math
 import random
+import ssl
 
 import boto
 import boto.ec2
@@ -55,7 +56,7 @@ def _read_server_list():
         key_name = f.readline().strip()
         zone = f.readline().strip()
         text = f.read()
-        instance_ids = text.split('\n')
+        instance_ids = [i for i in text.split('\n') if i != '']
 
         print 'Read %i bees from the roster.' % len(instance_ids)
 
@@ -96,18 +97,31 @@ def _get_security_group_ids(connection, security_group_names, subnet):
 
 # Methods
 
-def up(count, group, zone, image_id, instance_type, username, key_name, subnet):
+def up(count, group, zone, image_id, instance_type, username, key_name, subnet, bid = None):
     """
     Startup the load testing server.
     """
 
     existing_username, existing_key_name, existing_zone, instance_ids = _read_server_list()
 
-    if instance_ids:
-        print 'Bees are already assembled and awaiting orders.'
-        return
-
     count = int(count)
+    if existing_username == username and existing_key_name == key_name and existing_zone == zone:
+        # User, key and zone match existing values and instance ids are found on state file
+        if count <= len(instance_ids):
+            # Count is less than the amount of existing instances. No need to create new ones.
+            print 'Bees are already assembled and awaiting orders.'
+            return
+        else:
+            # Count is greater than the amount of existing instances. Need to create the only the extra instances.
+            count -= len(instance_ids)
+    elif instance_ids:
+        # Instances found on state file but user, key and/or zone not matching existing value.
+        # State file only stores one user/key/zone config combination so instances are unusable.
+        print 'Taking down {} unusable bees.'.format(len(instance_ids))
+        # Redirect prints in down() to devnull to avoid duplicate messages
+        _redirect_stdout('/dev/null', down)
+        # down() deletes existing state file so _read_server_list() returns a blank state
+        existing_username, existing_key_name, existing_zone, instance_ids = _read_server_list()
 
     pem_path = _get_pem_path(key_name)
 
@@ -116,25 +130,66 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet):
 
     print 'Connecting to the hive.'
 
-    ec2_connection = boto.ec2.connect_to_region(_get_region(zone))
+    try:
+        ec2_connection = boto.ec2.connect_to_region(_get_region(zone))
+    except boto.exception.NoAuthHandlerFound as e:
+        print "Authenciation config error, perhaps you do not have a ~/.boto file with correct permissions?"
+        print e.message
+        return e
+    except Exception as e:
+        print "Unknown error occured:"
+        print e.message
+        return e
 
-    print 'Attempting to call up %i bees.' % count
+    if ec2_connection == None:
+        raise Exception("Invalid zone specified? Unable to connect to region using zone name")
 
-    reservation = ec2_connection.run_instances(
-        image_id=image_id,
-        min_count=count,
-        max_count=count,
-        key_name=key_name,
-        security_groups=[group] if subnet is None else _get_security_group_ids(ec2_connection, [group], subnet),
-        instance_type=instance_type,
-        placement=None if 'gov' in zone else zone,
-        subnet_id=subnet)
+    if bid:
+        print 'Attempting to call up %i spot bees, this can take a while...' % count
+
+        spot_requests = ec2_connection.request_spot_instances(
+            image_id=image_id,
+            price=bid,
+            count=count,
+            key_name=key_name,
+            security_groups=[group] if subnet is None else _get_security_group_ids(ec2_connection, [group], subnet),
+            instance_type=instance_type,
+            placement=None if 'gov' in zone else zone,
+            subnet_id=subnet)
+
+        # it can take a few seconds before the spot requests are fully processed
+        time.sleep(5)
+
+        instances = _wait_for_spot_request_fulfillment(ec2_connection, spot_requests)
+    else:
+        print 'Attempting to call up %i bees.' % count
+
+        try:
+            reservation = ec2_connection.run_instances(
+                image_id=image_id,
+                min_count=count,
+                max_count=count,
+                key_name=key_name,
+                security_groups=[group] if subnet is None else _get_security_group_ids(ec2_connection, [group], subnet),
+                instance_type=instance_type,
+                placement=None if 'gov' in zone else zone,
+                subnet_id=subnet)
+        except boto.exception.EC2ResponseError as e:
+            print "Unable to call bees:", e.message
+            return e
+
+        instances = reservation.instances
+
+    if instance_ids:
+        existing_reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
+        existing_instances = [r.instances[0] for r in existing_reservations]
+        map(instances.append, existing_instances)
 
     print 'Waiting for bees to load their machine guns...'
 
-    instance_ids = []
+    instance_ids = instance_ids or []
 
-    for instance in reservation.instances:
+    for instance in filter(lambda i: i.state == 'pending', instances):
         instance.update()
         while instance.state != 'running':
             print '.'
@@ -147,9 +202,9 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet):
 
     ec2_connection.create_tags(instance_ids, { "Name": "a bee!" })
 
-    _write_server_list(username, key_name, zone, reservation.instances)
+    _write_server_list(username, key_name, zone, instances)
 
-    print 'The swarm has assembled %i bees.' % len(reservation.instances)
+    print 'The swarm has assembled %i bees.' % len(instances)
 
 def report():
     """
@@ -195,6 +250,27 @@ def down():
     print 'Stood down %i bees.' % len(terminated_instance_ids)
 
     _delete_server_list()
+
+def _wait_for_spot_request_fulfillment(conn, requests, fulfilled_requests = []):
+    """
+    Wait until all spot requests are fulfilled.
+
+    Once all spot requests are fulfilled, return a list of corresponding spot instances.
+    """
+    if len(requests) == 0:
+        reservations = conn.get_all_instances(instance_ids = [r.instance_id for r in fulfilled_requests])
+        return [r.instances[0] for r in reservations]
+    else:
+        time.sleep(10)
+        print '.'
+
+    requests = conn.get_all_spot_instance_requests(request_ids=[req.id for req in requests])
+    for req in requests:
+        if req.status.code == 'fulfilled':
+            fulfilled_requests.append(req)
+            print "spot bee `{}` joined the swarm.".format(req.instance_id)
+
+    return _wait_for_spot_request_fulfillment(conn, [r for r in requests if r not in fulfilled_requests], fulfilled_requests)
 
 def _attack(params):
     """
@@ -243,7 +319,7 @@ def _attack(params):
             options += ' -k'
 
         if params['cookies'] is not '':
-            options += ' -H \"Cookie: %ssessionid=NotARealSessionID;\"' % params['cookies']
+            options += ' -H \"Cookie: %s;sessionid=NotARealSessionID;\"' % params['cookies']
         else:
             options += ' -C \"sessionid=NotARealSessionID\"'
 
@@ -276,7 +352,6 @@ def _attack(params):
                 response['failed_requests_receive'] = float(re.search('Receive:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
                 response['failed_requests_length'] = float(re.search('Length:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
                 response['failed_requests_exceptions'] = float(re.search('Exceptions:\s+([0-9.]+)', failed_requests_detail.group(0)).group(1))
-
 
         complete_requests_search = re.search('Complete\ requests:\s+([0-9]+)', ab_results)
 
@@ -390,9 +465,10 @@ def _create_request_time_cdf_csv(results, complete_bees_params, request_time_cdf
                 header.append("bee %(instance_id)s [ms]" % p)
             writer.writerow(header)
             for i in range(100):
-                row = [i, request_time_cdf[i]]
+                row = [i, request_time_cdf[i]] if i < len(request_time_cdf) else [i,float("inf")]
                 for r in results:
-                    row.append(r['request_time_cdf'][i]["Time in ms"])
+                    if r is not None:
+                    	row.append(r['request_time_cdf'][i]["Time in ms"])
                 writer.writerow(row)
 
 
@@ -571,7 +647,12 @@ def attack(url, n, c, **options):
     for key, value in dict_headers.iteritems():
         request.add_header(key, value)
 
-    response = urllib2.urlopen(request)
+    if url.lower().startswith("https://") and hasattr(ssl, '_create_unverified_context'):
+        context = ssl._create_unverified_context()
+        response = urllib2.urlopen(request, context=context)
+    else:
+        response = urllib2.urlopen(request)
+
     response.read()
 
     print 'Organizing the swarm.'
@@ -593,3 +674,9 @@ def attack(url, n, c, **options):
             print('Your targets performance tests meet our standards, the Queen sends her regards.')
             sys.exit(0)
 
+def _redirect_stdout(outfile, func, *args, **kwargs):
+    save_out = sys.stdout
+    with open(outfile, 'w') as redir_out:
+        sys.stdout = redir_out
+        func(*args, **kwargs)
+    sys.stdout = save_out
