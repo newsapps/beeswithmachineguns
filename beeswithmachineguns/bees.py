@@ -106,14 +106,19 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
 
     count = int(count)
     if existing_username == username and existing_key_name == key_name and existing_zone == zone:
+        ec2_connection = boto.ec2.connect_to_region(_get_region(zone))
+        existing_reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
+        existing_instances = filter(lambda i: i.state == 'running', [r.instances[0] for r in existing_reservations])
         # User, key and zone match existing values and instance ids are found on state file
-        if count <= len(instance_ids):
+        if count <= len(existing_instances):
             # Count is less than the amount of existing instances. No need to create new ones.
             print 'Bees are already assembled and awaiting orders.'
             return
         else:
+            # for instance in existing_instances:
+            #     if instance.state
             # Count is greater than the amount of existing instances. Need to create the only the extra instances.
-            count -= len(instance_ids)
+            count -= len(existing_instances)
     elif instance_ids:
         # Instances found on state file but user, key and/or zone not matching existing value.
         # State file only stores one user/key/zone config combination so instances are unusable.
@@ -182,8 +187,10 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
 
     if instance_ids:
         existing_reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
-        existing_instances = [r.instances[0] for r in existing_reservations]
+        existing_instances = filter(lambda i: i.state == 'running', [r.instances[0] for r in existing_reservations])
         map(instances.append, existing_instances)
+        dead_instances = filter(lambda i: i not in [j.id for j in existing_instances], instance_ids)
+        map(instance_ids.pop, [instance_ids.index(i) for i in dead_instances])
 
     print 'Waiting for bees to load their machine guns...'
 
