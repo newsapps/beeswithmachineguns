@@ -29,8 +29,8 @@ import os
 import re
 import socket
 import time
-import urllib
-import urllib2
+import urllib.request, urllib.parse, urllib.error
+import urllib.request, urllib.error, urllib.parse
 import base64
 import csv
 import sys
@@ -58,7 +58,7 @@ def _read_server_list():
         text = f.read()
         instance_ids = [i for i in text.split('\n') if i != '']
 
-        print 'Read %i bees from the roster.' % len(instance_ids)
+        print('Read %i bees from the roster.' % len(instance_ids))
 
     return (username, key_name, zone, instance_ids)
 
@@ -109,7 +109,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
         # User, key and zone match existing values and instance ids are found on state file
         if count <= len(instance_ids):
             # Count is less than the amount of existing instances. No need to create new ones.
-            print 'Bees are already assembled and awaiting orders.'
+            print('Bees are already assembled and awaiting orders.')
             return
         else:
             # Count is greater than the amount of existing instances. Need to create the only the extra instances.
@@ -117,7 +117,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
     elif instance_ids:
         # Instances found on state file but user, key and/or zone not matching existing value.
         # State file only stores one user/key/zone config combination so instances are unusable.
-        print 'Taking down {} unusable bees.'.format(len(instance_ids))
+        print('Taking down {} unusable bees.'.format(len(instance_ids)))
         # Redirect prints in down() to devnull to avoid duplicate messages
         _redirect_stdout('/dev/null', down)
         # down() deletes existing state file so _read_server_list() returns a blank state
@@ -126,26 +126,26 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
     pem_path = _get_pem_path(key_name)
 
     if not os.path.isfile(pem_path):
-        print 'Warning. No key file found for %s. You will need to add this key to your SSH agent to connect.' % pem_path
+        print('Warning. No key file found for %s. You will need to add this key to your SSH agent to connect.' % pem_path)
 
-    print 'Connecting to the hive.'
+    print('Connecting to the hive.')
 
     try:
         ec2_connection = boto.ec2.connect_to_region(_get_region(zone))
     except boto.exception.NoAuthHandlerFound as e:
-        print "Authenciation config error, perhaps you do not have a ~/.boto file with correct permissions?"
-        print e.message
+        print("Authenciation config error, perhaps you do not have a ~/.boto file with correct permissions?")
+        print(e.message)
         return e
     except Exception as e:
-        print "Unknown error occured:"
-        print e.message
+        print("Unknown error occured:")
+        print(e.message)
         return e
 
     if ec2_connection == None:
         raise Exception("Invalid zone specified? Unable to connect to region using zone name")
 
     if bid:
-        print 'Attempting to call up %i spot bees, this can take a while...' % count
+        print('Attempting to call up %i spot bees, this can take a while...' % count)
 
         spot_requests = ec2_connection.request_spot_instances(
             image_id=image_id,
@@ -162,7 +162,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
 
         instances = _wait_for_spot_request_fulfillment(ec2_connection, spot_requests)
     else:
-        print 'Attempting to call up %i bees.' % count
+        print('Attempting to call up %i bees.' % count)
 
         try:
             reservation = ec2_connection.run_instances(
@@ -175,7 +175,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
                 placement=None if 'gov' in zone else zone,
                 subnet_id=subnet)
         except boto.exception.EC2ResponseError as e:
-            print "Unable to call bees:", e.message
+            print("Unable to call bees:", e.message)
             return e
 
         instances = reservation.instances
@@ -183,28 +183,28 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
     if instance_ids:
         existing_reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
         existing_instances = [r.instances[0] for r in existing_reservations]
-        map(instances.append, existing_instances)
+        list(map(instances.append, existing_instances))
 
-    print 'Waiting for bees to load their machine guns...'
+    print('Waiting for bees to load their machine guns...')
 
     instance_ids = instance_ids or []
 
-    for instance in filter(lambda i: i.state == 'pending', instances):
+    for instance in [i for i in instances if i.state == 'pending']:
         instance.update()
         while instance.state != 'running':
-            print '.'
+            print('.')
             time.sleep(5)
             instance.update()
 
         instance_ids.append(instance.id)
 
-        print 'Bee %s is ready for the attack.' % instance.id
+        print('Bee %s is ready for the attack.' % instance.id)
 
     ec2_connection.create_tags(instance_ids, { "Name": "a bee!" })
 
     _write_server_list(username, key_name, zone, instances)
 
-    print 'The swarm has assembled %i bees.' % len(instances)
+    print('The swarm has assembled %i bees.' % len(instances))
 
 def report():
     """
@@ -213,7 +213,7 @@ def report():
     username, key_name, zone, instance_ids = _read_server_list()
 
     if not instance_ids:
-        print 'No bees have been mobilized.'
+        print('No bees have been mobilized.')
         return
 
     ec2_connection = boto.ec2.connect_to_region(_get_region(zone))
@@ -226,7 +226,7 @@ def report():
         instances.extend(reservation.instances)
 
     for instance in instances:
-        print 'Bee %s: %s @ %s' % (instance.id, instance.state, instance.ip_address)
+        print('Bee %s: %s @ %s' % (instance.id, instance.state, instance.ip_address))
 
 def down():
     """
@@ -235,19 +235,19 @@ def down():
     username, key_name, zone, instance_ids = _read_server_list()
 
     if not instance_ids:
-        print 'No bees have been mobilized.'
+        print('No bees have been mobilized.')
         return
 
-    print 'Connecting to the hive.'
+    print('Connecting to the hive.')
 
     ec2_connection = boto.ec2.connect_to_region(_get_region(zone))
 
-    print 'Calling off the swarm.'
+    print('Calling off the swarm.')
 
     terminated_instance_ids = ec2_connection.terminate_instances(
         instance_ids=instance_ids)
 
-    print 'Stood down %i bees.' % len(terminated_instance_ids)
+    print('Stood down %i bees.' % len(terminated_instance_ids))
 
     _delete_server_list()
 
@@ -262,13 +262,13 @@ def _wait_for_spot_request_fulfillment(conn, requests, fulfilled_requests = []):
         return [r.instances[0] for r in reservations]
     else:
         time.sleep(10)
-        print '.'
+        print('.')
 
     requests = conn.get_all_spot_instance_requests(request_ids=[req.id for req in requests])
     for req in requests:
         if req.status.code == 'fulfilled':
             fulfilled_requests.append(req)
-            print "spot bee `{}` joined the swarm.".format(req.instance_id)
+            print("spot bee `{}` joined the swarm.".format(req.instance_id))
 
     return _wait_for_spot_request_fulfillment(conn, [r for r in requests if r not in fulfilled_requests], fulfilled_requests)
 
@@ -278,7 +278,7 @@ def _attack(params):
 
     Intended for use with multiprocessing.
     """
-    print 'Bee %i is joining the swarm.' % params['i']
+    print('Bee %i is joining the swarm.' % params['i'])
 
     try:
         client = paramiko.SSHClient()
@@ -294,7 +294,7 @@ def _attack(params):
                 username=params['username'],
                 key_filename=pem_path)
 
-        print 'Bee %i is firing her machine gun. Bang bang!' % params['i']
+        print('Bee %i is firing her machine gun. Bang bang!' % params['i'])
 
         options = ''
         if params['headers'] is not '':
@@ -307,7 +307,7 @@ def _attack(params):
         if params['csv_filename']:
             options += ' -e %(csv_filename)s' % params
         else:
-            print 'Bee %i lost sight of the target (connection timed out creating csv_filename).' % params['i']
+            print('Bee %i lost sight of the target (connection timed out creating csv_filename).' % params['i'])
             return None
 
         if params['post_file']:
@@ -336,7 +336,7 @@ def _attack(params):
         ms_per_request_search = re.search('Time\ per\ request:\s+([0-9.]+)\ \[ms\]\ \(mean\)', ab_results)
 
         if not ms_per_request_search:
-            print 'Bee %i lost sight of the target (connection timed out running ab).' % params['i']
+            print('Bee %i lost sight of the target (connection timed out running ab).' % params['i'])
             return None
 
         requests_per_second_search = re.search('Requests\ per\ second:\s+([0-9.]+)\ \[#\/sec\]\ \(mean\)', ab_results)
@@ -371,15 +371,15 @@ def _attack(params):
             row["Time in ms"] = float(row["Time in ms"])
             response['request_time_cdf'].append(row)
         if not response['request_time_cdf']:
-            print 'Bee %i lost sight of the target (connection timed out reading csv).' % params['i']
+            print('Bee %i lost sight of the target (connection timed out reading csv).' % params['i'])
             return None
 
-        print 'Bee %i is out of ammo.' % params['i']
+        print('Bee %i is out of ammo.' % params['i'])
 
         client.close()
 
         return response
-    except socket.error, e:
+    except socket.error as e:
         return e
 
 
@@ -498,51 +498,51 @@ def _print_results(summarized_results):
     Print summarized load-testing results.
     """
     if summarized_results['exception_bees']:
-        print '     %i of your bees didn\'t make it to the action. They might be taking a little longer than normal to find their machine guns, or may have been terminated without using "bees down".' % summarized_results['num_exception_bees']
+        print('     %i of your bees didn\'t make it to the action. They might be taking a little longer than normal to find their machine guns, or may have been terminated without using "bees down".' % summarized_results['num_exception_bees'])
 
     if summarized_results['timeout_bees']:
-        print '     Target timed out without fully responding to %i bees.' % summarized_results['num_timeout_bees']
+        print('     Target timed out without fully responding to %i bees.' % summarized_results['num_timeout_bees'])
 
     if summarized_results['num_complete_bees'] == 0:
-        print '     No bees completed the mission. Apparently your bees are peace-loving hippies.'
+        print('     No bees completed the mission. Apparently your bees are peace-loving hippies.')
         return
 
-    print '     Complete requests:\t\t%i' % summarized_results['total_complete_requests']
+    print('     Complete requests:\t\t%i' % summarized_results['total_complete_requests'])
 
-    print '     Failed requests:\t\t%i' % summarized_results['total_failed_requests']
-    print '          connect:\t\t%i' % summarized_results['total_failed_requests_connect']
-    print '          receive:\t\t%i' % summarized_results['total_failed_requests_receive']
-    print '          length:\t\t%i' % summarized_results['total_failed_requests_length']
-    print '          exceptions:\t\t%i' % summarized_results['total_failed_requests_exceptions']
-    print '     Response Codes:'
-    print '          2xx:\t\t%i' % summarized_results['total_number_of_200s']
-    print '          3xx:\t\t%i' % summarized_results['total_number_of_300s']
-    print '          4xx:\t\t%i' % summarized_results['total_number_of_400s']
-    print '          5xx:\t\t%i' % summarized_results['total_number_of_500s']
-    print '     Requests per second:\t%f [#/sec] (mean of bees)' % summarized_results['mean_requests']
+    print('     Failed requests:\t\t%i' % summarized_results['total_failed_requests'])
+    print('          connect:\t\t%i' % summarized_results['total_failed_requests_connect'])
+    print('          receive:\t\t%i' % summarized_results['total_failed_requests_receive'])
+    print('          length:\t\t%i' % summarized_results['total_failed_requests_length'])
+    print('          exceptions:\t\t%i' % summarized_results['total_failed_requests_exceptions'])
+    print('     Response Codes:')
+    print('          2xx:\t\t%i' % summarized_results['total_number_of_200s'])
+    print('          3xx:\t\t%i' % summarized_results['total_number_of_300s'])
+    print('          4xx:\t\t%i' % summarized_results['total_number_of_400s'])
+    print('          5xx:\t\t%i' % summarized_results['total_number_of_500s'])
+    print('     Requests per second:\t%f [#/sec] (mean of bees)' % summarized_results['mean_requests'])
     if 'rps_bounds' in summarized_results and summarized_results['rps_bounds'] is not None:
-        print '     Requests per second:\t%f [#/sec] (upper bounds)' % summarized_results['rps_bounds']
+        print('     Requests per second:\t%f [#/sec] (upper bounds)' % summarized_results['rps_bounds'])
 
-    print '     Time per request:\t\t%f [ms] (mean of bees)' % summarized_results['mean_response']
+    print('     Time per request:\t\t%f [ms] (mean of bees)' % summarized_results['mean_response'])
     if 'tpr_bounds' in summarized_results and summarized_results['tpr_bounds'] is not None:
-        print '     Time per request:\t\t%f [ms] (lower bounds)' % summarized_results['tpr_bounds']
+        print('     Time per request:\t\t%f [ms] (lower bounds)' % summarized_results['tpr_bounds'])
 
-    print '     50%% responses faster than:\t%f [ms]' % summarized_results['request_time_cdf'][49]
-    print '     90%% responses faster than:\t%f [ms]' % summarized_results['request_time_cdf'][89]
+    print('     50%% responses faster than:\t%f [ms]' % summarized_results['request_time_cdf'][49])
+    print('     90%% responses faster than:\t%f [ms]' % summarized_results['request_time_cdf'][89])
 
     if 'performance_accepted' in summarized_results:
-        print '     Performance check:\t\t%s' % summarized_results['performance_accepted']
+        print('     Performance check:\t\t%s' % summarized_results['performance_accepted'])
 
     if summarized_results['mean_response'] < 500:
-        print 'Mission Assessment: Target crushed bee offensive.'
+        print('Mission Assessment: Target crushed bee offensive.')
     elif summarized_results['mean_response'] < 1000:
-        print 'Mission Assessment: Target successfully fended off the swarm.'
+        print('Mission Assessment: Target successfully fended off the swarm.')
     elif summarized_results['mean_response'] < 1500:
-        print 'Mission Assessment: Target wounded, but operational.'
+        print('Mission Assessment: Target wounded, but operational.')
     elif summarized_results['mean_response'] < 2000:
-        print 'Mission Assessment: Target severely compromised.'
+        print('Mission Assessment: Target severely compromised.')
     else:
-        print 'Mission Assessment: Swarm annihilated target.'
+        print('Mission Assessment: Swarm annihilated target.')
 
 
 def attack(url, n, c, **options):
@@ -560,18 +560,18 @@ def attack(url, n, c, **options):
     if csv_filename:
         try:
             stream = open(csv_filename, 'w')
-        except IOError, e:
+        except IOError as e:
             raise IOError("Specified csv_filename='%s' is not writable. Check permissions or specify a different filename and try again." % csv_filename)
 
     if not instance_ids:
-        print 'No bees are ready to attack.'
+        print('No bees are ready to attack.')
         return
 
-    print 'Connecting to the hive.'
+    print('Connecting to the hive.')
 
     ec2_connection = boto.ec2.connect_to_region(_get_region(zone))
 
-    print 'Assembling bees.'
+    print('Assembling bees.')
 
     reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
 
@@ -583,19 +583,19 @@ def attack(url, n, c, **options):
     instance_count = len(instances)
 
     if n < instance_count * 2:
-        print 'bees: error: the total number of requests must be at least %d (2x num. instances)' % (instance_count * 2)
+        print('bees: error: the total number of requests must be at least %d (2x num. instances)' % (instance_count * 2))
         return
     if c < instance_count:
-        print 'bees: error: the number of concurrent requests must be at least %d (num. instances)' % instance_count
+        print('bees: error: the number of concurrent requests must be at least %d (num. instances)' % instance_count)
         return
     if n < c:
-        print 'bees: error: the number of concurrent requests (%d) must be at most the same as number of requests (%d)' % (c, n)
+        print('bees: error: the number of concurrent requests (%d) must be at most the same as number of requests (%d)' % (c, n))
         return
 
     requests_per_instance = int(float(n) / instance_count)
     connections_per_instance = int(float(c) / instance_count)
 
-    print 'Each of %i bees will fire %s rounds, %s at a time.' % (instance_count, requests_per_instance, connections_per_instance)
+    print('Each of %i bees will fire %s rounds, %s at a time.' % (instance_count, requests_per_instance, connections_per_instance))
 
     params = []
 
@@ -619,9 +619,9 @@ def attack(url, n, c, **options):
             'basic_auth': options.get('basic_auth')
         })
 
-    print 'Stinging URL so it will be cached for the attack.'
+    print('Stinging URL so it will be cached for the attack.')
 
-    request = urllib2.Request(url)
+    request = urllib.request.Request(url)
     # Need to revisit to support all http verbs.
     if post_file:
         try:
@@ -629,7 +629,7 @@ def attack(url, n, c, **options):
                 content = content_file.read()
             request.add_data(content)
         except IOError:
-            print 'bees: error: The post file you provided doesn\'t exist.'
+            print('bees: error: The post file you provided doesn\'t exist.')
             return
 
     if cookies is not '':
@@ -644,27 +644,27 @@ def attack(url, n, c, **options):
     if headers is not '':
         dict_headers = headers = dict(j.split(':') for j in [i.strip() for i in headers.split(';') if i != ''])
 
-    for key, value in dict_headers.iteritems():
+    for key, value in dict_headers.items():
         request.add_header(key, value)
 
     if url.lower().startswith("https://") and hasattr(ssl, '_create_unverified_context'):
         context = ssl._create_unverified_context()
-        response = urllib2.urlopen(request, context=context)
+        response = urllib.request.urlopen(request, context=context)
     else:
-        response = urllib2.urlopen(request)
+        response = urllib.request.urlopen(request)
 
     response.read()
 
-    print 'Organizing the swarm.'
+    print('Organizing the swarm.')
     # Spin up processes for connecting to EC2 instances
     pool = Pool(len(params))
     results = pool.map(_attack, params)
 
     summarized_results = _summarize_results(results, params, csv_filename)
-    print 'Offensive complete.'
+    print('Offensive complete.')
     _print_results(summarized_results)
 
-    print 'The swarm is awaiting new orders.'
+    print('The swarm is awaiting new orders.')
 
     if 'performance_accepted' in summarized_results:
         if summarized_results['performance_accepted'] is False:
