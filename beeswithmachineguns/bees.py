@@ -30,20 +30,28 @@ import re
 import socket
 import time
 import urllib.request, urllib.parse, urllib.error
-import urllib.request, urllib.error, urllib.parse
 import base64
 import csv
 import sys
 import random
 import ssl
+from io import StringIO
+from contextlib import contextmanager
 
-import boto
 import boto.ec2
+import boto.exception
 import paramiko
 
 STATE_FILENAME = os.path.expanduser('~/.bees')
 
 # Utilities
+
+@contextmanager
+def _redirect_stdout(outfile=None):
+    save_stdout = sys.stdout
+    sys.stdout = outfile or StringIO()
+    yield
+    sys.stdout = save_stdout
 
 def _read_server_list():
     instance_ids = []
@@ -119,7 +127,8 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
         # State file only stores one user/key/zone config combination so instances are unusable.
         print('Taking down {} unusable bees.'.format(len(instance_ids)))
         # Redirect prints in down() to devnull to avoid duplicate messages
-        _redirect_stdout('/dev/null', down)
+        with _redirect_stdout():
+            down()
         # down() deletes existing state file so _read_server_list() returns a blank state
         existing_username, existing_key_name, existing_zone, instance_ids = _read_server_list()
 
@@ -183,7 +192,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
     if instance_ids:
         existing_reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
         existing_instances = [r.instances[0] for r in existing_reservations]
-        list(map(instances.append, existing_instances))
+        map(instances.append, existing_instances)
 
     print('Waiting for bees to load their machine guns...')
 
@@ -312,7 +321,8 @@ def _attack(params):
 
         if params['post_file']:
             pem_file_path=_get_pem_path(params['key_name'])
-            os.system("scp -q -o 'StrictHostKeyChecking=no' -i %s %s %s@%s:/tmp/honeycomb" % (pem_file_path, params['post_file'], params['username'], params['instance_name']))
+            os.system("scp -q -o 'StrictHostKeyChecking=no' -i %s %s %s@%s:/tmp/honeycomb"
+                      "" % (pem_file_path, params['post_file'], params['username'], params['instance_name']))
             options += ' -T "%(mime_type)s; charset=UTF-8" -p /tmp/honeycomb' % params
 
         if params['keep_alive']:
@@ -498,7 +508,8 @@ def _print_results(summarized_results):
     Print summarized load-testing results.
     """
     if summarized_results['exception_bees']:
-        print('     %i of your bees didn\'t make it to the action. They might be taking a little longer than normal to find their machine guns, or may have been terminated without using "bees down".' % summarized_results['num_exception_bees'])
+        print('     %i of your bees didn\'t make it to the action. They might be taking a little longer than normal to'
+              ' find their machine guns, or may have been terminated without using "bees down".' % summarized_results['num_exception_bees'])
 
     if summarized_results['timeout_bees']:
         print('     Target timed out without fully responding to %i bees.' % summarized_results['num_timeout_bees'])
@@ -673,10 +684,3 @@ def attack(url, n, c, **options):
         else:
             print('Your targets performance tests meet our standards, the Queen sends her regards.')
             sys.exit(0)
-
-def _redirect_stdout(outfile, func, *args, **kwargs):
-    save_out = sys.stdout
-    with open(outfile, 'w') as redir_out:
-        sys.stdout = redir_out
-        func(*args, **kwargs)
-    sys.stdout = save_out
