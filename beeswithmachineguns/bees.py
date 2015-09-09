@@ -42,6 +42,7 @@ import csv
 import random
 import ssl
 from contextlib import contextmanager
+import traceback
 
 import boto.ec2
 import boto.exception
@@ -398,6 +399,10 @@ def _attack(params):
         return response
     except socket.error as e:
         return e
+    except Exception as e:
+        traceback.print_exc()
+        print()
+        raise e
 
 
 def _summarize_results(results, params, csv_filename):
