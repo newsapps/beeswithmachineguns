@@ -30,7 +30,8 @@ import re
 import socket
 import time
 import sys
-if sys.version_info.major == 2:
+IS_PY2 = sys.version_info.major == 2
+if IS_PY2:
     from urllib2 import urlopen, Request
     from StringIO import StringIO
 else:
@@ -316,7 +317,8 @@ def _attack(params):
                     options += ' -H "%s"' % h.strip()
 
         stdin, stdout, stderr = client.exec_command('mktemp')
-        params['csv_filename'] = stdout.read().strip()
+        # paramiko's read() returns bytes which need to be converted back to a str
+        params['csv_filename'] = IS_PY2 and stdout.read().strip() or stdout.read().decode('utf-8').strip()
         if params['csv_filename']:
             options += ' -e %(csv_filename)s' % params
         else:
@@ -346,7 +348,8 @@ def _attack(params):
 
         response = {}
 
-        ab_results = stdout.read()
+        # paramiko's read() returns bytes which need to be converted back to a str
+        ab_results = IS_PY2 and stdout.read() or stdout.read().decode('utf-8')
         ms_per_request_search = re.search('Time\ per\ request:\s+([0-9.]+)\ \[ms\]\ \(mean\)', ab_results)
 
         if not ms_per_request_search:
@@ -472,7 +475,11 @@ def _summarize_results(results, params, csv_filename):
 
 def _create_request_time_cdf_csv(results, complete_bees_params, request_time_cdf, csv_filename):
     if csv_filename:
-        with open(csv_filename, 'w') as stream:
+        # csv requires files in text-mode with newlines='' in python3
+        # see http://python3porting.com/problems.html#csv-api-changes
+        openmode = IS_PY2 and 'w' or 'wt'
+        openkwargs = IS_PY2 and {} or {'encoding': 'utf-8', 'newline': ''}
+        with open(csv_filename, openmode, openkwargs) as stream:
             writer = csv.writer(stream)
             header = ["% faster than", "all bees [ms]"]
             for p in complete_bees_params:
@@ -502,7 +509,8 @@ def _get_request_time_cdf(total_complete_requests, complete_bees):
             j = int(random.random() * len(cdf))
             sample_response_times.append(cdf[j]["Time in ms"])
     sample_response_times.sort()
-    request_time_cdf = sample_response_times[0:sample_size:sample_size / n_final_sample]
+    # python3 division returns floats so convert back to int
+    request_time_cdf = sample_response_times[0:sample_size:int(sample_size / n_final_sample)]
 
     return request_time_cdf
 
@@ -642,7 +650,11 @@ def attack(url, n, c, **options):
         try:
             with open(post_file, 'r') as content_file:
                 content = content_file.read()
-            request.add_data(content)
+            if IS_PY2:
+                request.add_data(content)
+            else:
+                # python3 removed add_data method from Request and added data attribute, either bytes or iterable of bytes
+                request.data = bytes(content.encode('utf-8'))
         except IOError:
             print('bees: error: The post file you provided doesn\'t exist.')
             return
