@@ -29,13 +29,17 @@ import os
 import re
 import socket
 import time
-import urllib.request, urllib.parse, urllib.error
+import sys
+if sys.version_info.major == 2:
+    from urllib2 import urlopen, Request
+    from StringIO import StringIO
+else:
+    from urllib.request import urlopen, Request
+    from io import StringIO
 import base64
 import csv
-import sys
 import random
 import ssl
-from io import StringIO
 from contextlib import contextmanager
 
 import boto.ec2
@@ -632,7 +636,7 @@ def attack(url, n, c, **options):
 
     print('Stinging URL so it will be cached for the attack.')
 
-    request = urllib.request.Request(url)
+    request = Request(url)
     # Need to revisit to support all http verbs.
     if post_file:
         try:
@@ -660,9 +664,9 @@ def attack(url, n, c, **options):
 
     if url.lower().startswith("https://") and hasattr(ssl, '_create_unverified_context'):
         context = ssl._create_unverified_context()
-        response = urllib.request.urlopen(request, context=context)
+        response = urlopen(request, context=context)
     else:
-        response = urllib.request.urlopen(request)
+        response = urlopen(request)
 
     response.read()
 
