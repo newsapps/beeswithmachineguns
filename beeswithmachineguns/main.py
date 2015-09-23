@@ -24,8 +24,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-import bees
-from urlparse import urlparse
+from . import bees
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
 from optparse import OptionParser, OptionGroup
 
 def parse_options():
@@ -136,7 +139,7 @@ commands:
             parser.error('To spin up new instances you need to specify a key-pair name with -k')
 
         if options.group == 'default':
-            print 'New bees will use the "default" EC2 security group. Please note that port 22 (SSH) is not normally open on this group. You will need to use to the EC2 tools to open it before you will be able to attack.'
+            print('New bees will use the "default" EC2 security group. Please note that port 22 (SSH) is not normally open on this group. You will need to use to the EC2 tools to open it before you will be able to attack.')
 
         bees.up(options.servers, options.group, options.zone, options.instance, options.type, options.login, options.key, options.subnet, options.bid)
     elif command == 'attack':
