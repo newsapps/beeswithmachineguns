@@ -15,7 +15,7 @@ reservation = ec2_connection.run_instances(
         security_groups=None,
         instance_type='m3.medium',
         placement='us-west-2b',
-        subnet_id='subnet-b12880e8')
+        subnet_id='subnet-c347cca6')
 """
 #!/usr/bin/env python
 
