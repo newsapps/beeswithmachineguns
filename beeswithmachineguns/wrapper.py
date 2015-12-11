@@ -8,16 +8,18 @@ ec2 = boto.ec2.connect_to_region('us-west-2')
 ec2_connection = EC2Connection()
 
 reservation = ec2_connection.run_instances(
-        image_id='ami-5d155d37',
+        image_id='ami-6989a659',
         min_count=1,
         max_count=1,
-        key_name='commerce-bees',
-        security_groups=None,
+        key_name='offers-dev',
+        security_group_ids=['sg-7e1d2a1a'],
         instance_type='m3.medium',
         placement='us-west-2b',
         subnet_id='subnet-c347cca6')
 """
 #!/usr/bin/env python
+
+ec2-run-instances ami-6989a659 -k 'offers-dev' --instance-type m3.medium
 
 import boto
 import boto.ec2
