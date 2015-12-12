@@ -1,3 +1,4 @@
+
 *.pyc
 theswarm.txt
 *.swp
@@ -6,3 +7,6 @@ build
 MANIFEST
 dist
 env
+launch.json
+tasks.json
+data.json

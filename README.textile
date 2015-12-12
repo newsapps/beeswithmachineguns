@@ -64,6 +64,23 @@ bees attack -n 10000 -c 250 -u http://www.ournewwebbyhotness.com/
 bees down
 </pre>
 
+A bees session where this is being called from a python file, while specifying content type and a payload file.
+This is a working example, all of these objects exist in the us-east-1 region.
+
+<pre>
+import bees
+import json
+
+sOptions = '{"post_file":"data.json","contenttype":"application/json"}'
+options = json.loads(sOptions)
+
+bees.up(1,'bees-sg','us-east-1b','ami-5d155d37','m3.medium','ubuntu','commerce-bees','subnet-b12880e8')
+bees.attack('<URL TO TEST>',2,2,**options)
+bees.down()
+</pre>
+
+In this case the data.json is a simple json file, mind the path.
+
 This spins up 4 servers in security group 'public' using the EC2 keypair 'frakkingtoasters', whose private key is expected to reside at ~/.ssh/frakkingtoasters.pem.
 
 *Note*: the default EC2 security group is called 'default' and by default it locks out SSH access. I recommend creating a 'public' security group for use with the bees and explicitly opening port 22 on that group.
