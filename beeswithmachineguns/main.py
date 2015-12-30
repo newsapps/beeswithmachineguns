@@ -146,14 +146,11 @@ commands:
         if not options.url:
             parser.error('To run an attack you need to specify a url with -u')
 
-        parsed = urlparse(options.url)
-        if "/" not in parsed.path:
-            if not parsed.scheme:
-                parsed = urlparse("http://" + options.url + "/")
-            else:
-                parsed = urlparse(options.url + "/")
-        if not parsed.scheme:
-                parsed = urlparse("http://" + options.url)
+        # urlparse needs a scheme in the url. ab doesn't, so add one just for the sake of parsing.
+        # urlparse('google.com').path == 'google.com' and urlparse('google.com').netloc == '' -> True
+        parsed = urlparse(options.url) if '://' in options.url else urlparse('http://'+options.url)
+        if parsed.path == '':
+            options.url += '/'
         additional_options = dict(
             cookies=options.cookies,
             headers=options.headers,
@@ -167,7 +164,6 @@ commands:
         )
 
         bees.attack(options.url, options.number, options.concurrent, **additional_options)
-
     elif command == 'down':
         bees.down()
     elif command == 'report':
