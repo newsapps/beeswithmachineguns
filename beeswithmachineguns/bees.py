@@ -162,7 +162,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
     if ec2_connection == None:
         raise Exception("Invalid zone specified? Unable to connect to region using zone name")
 
-    groupId = [group] if subnet is None else _get_security_group_id(ec2_connection, group, subnet)
+    groupId = group if subnet is None else _get_security_group_id(ec2_connection, group, subnet)
     print("GroupId found: %s" % groupId)
     
     placement = None if 'gov' in zone else zone
