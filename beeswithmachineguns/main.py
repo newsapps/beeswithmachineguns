@@ -116,9 +116,9 @@ commands:
     attack_group.add_option('-e', '--csv', metavar="FILENAME", nargs=1,
                             action='store', dest='csv_filename', type='string', default='',
                             help="Store the distribution of results in a csv file for all completed bees (default: '').")
-    attack_group.add_option('-t', '--contenttype', metavar="CONTENTTYPE", nargs=1,
+    attack_group.add_option('-P', '--contenttype', metavar="CONTENTTYPE", nargs=1,
                             action='store', dest='contenttype', type='string', default='text/plain',
-                            help="ContentType header to send to the target of the attack.)
+                            help="ContentType header to send to the target of the attack.")
 
     # Optional
     attack_group.add_option('-T', '--tpr', metavar='TPR', nargs=1, action='store', dest='tpr', default=None, type='float',
