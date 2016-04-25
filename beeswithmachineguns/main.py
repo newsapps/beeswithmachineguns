@@ -173,6 +173,7 @@ commands:
         parser.error('Please enter a command.')
 
     command = args[0]
+    #set time for in between threads
     delay = 0.2
 
     if command == 'up':
@@ -197,6 +198,7 @@ commands:
                                                             options.type,options.login,
                                                             options.key, options.subnet,
                                                             options.bid)).start()
+                    #time allowed between threads
                     time.sleep(delay)
         else:
             bees.up(options.servers, options.group, options.zone, options.instance, options.type, options.login, options.key, options.subnet, options.bid)
@@ -242,12 +244,14 @@ commands:
                 additional_options['zone'] = region
                 threading.Thread(target=bees.hurl_attack, args=(options.url, options.number, options.concurrent),
                     kwargs=additional_options).start()
+                #time allowed between threads
                 time.sleep(delay)
         else:
             for region in regions_list:
                 additional_options['zone'] = region
                 threading.Thread(target=bees.attack, args=(options.url, options.number,
                     options.concurrent), kwargs=additional_options).start()
+                #time allowed between threads
                 time.sleep(delay)
 
     elif command == 'down':
