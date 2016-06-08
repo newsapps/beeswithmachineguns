@@ -119,6 +119,8 @@ The bees are a creation of the News Applications team at the Chicago Tribune--vi
 
 Initial refactoring code and inspiration from "Jeff Larson":http://github.com/thejefflarson.
 
+Multiple url support from "timsu":https://github.com/timsu/beeswithmachineguns.
+
 Thanks to everyone who reported bugs against the alpha release.
 
 h2. License
