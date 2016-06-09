@@ -644,12 +644,17 @@ def attack(url, n, c, **options):
 
     params = []
 
+    urls = url.split(",")
+
+    if len(urls) > instance_count:
+        print('bees: warning: more urls given than instances. last urls will be ignored.')
+
     for i, instance in enumerate(instances):
         params.append({
             'i': i,
             'instance_id': instance.id,
             'instance_name': instance.private_dns_name if instance.public_dns_name == "" else instance.public_dns_name,
-            'url': url,
+            'url': urls[i % len(urls)],
             'concurrent_requests': connections_per_instance,
             'num_requests': requests_per_instance,
             'username': username,
@@ -667,46 +672,47 @@ def attack(url, n, c, **options):
 
     print('Stinging URL so it will be cached for the attack.')
 
-    request = Request(url)
-    # Need to revisit to support all http verbs.
-    if post_file:
-        try:
-            with open(post_file, 'r') as content_file:
-                content = content_file.read()
-            if IS_PY2:
-                request.add_data(content)
-            else:
-                # python3 removed add_data method from Request and added data attribute, either bytes or iterable of bytes
-                request.data = bytes(content.encode('utf-8'))
-        except IOError:
-            print('bees: error: The post file you provided doesn\'t exist.')
-            return
+    for url in urls:
+        request = Request(url)
+        # Need to revisit to support all http verbs.
+        if post_file:
+            try:
+                with open(post_file, 'r') as content_file:
+                    content = content_file.read()
+                if IS_PY2:
+                    request.add_data(content)
+                else:
+                    # python3 removed add_data method from Request and added data attribute, either bytes or iterable of bytes
+                    request.data = bytes(content.encode('utf-8'))
+            except IOError:
+                print('bees: error: The post file you provided doesn\'t exist.')
+                return
 
-    if cookies is not '':
-        request.add_header('Cookie', cookies)
+        if cookies is not '':
+            request.add_header('Cookie', cookies)
 
-    if basic_auth is not '':
-        authentication = base64.encodestring(basic_auth).replace('\n', '')
-        request.add_header('Authorization', 'Basic %s' % authentication)
+        if basic_auth is not '':
+            authentication = base64.encodestring(basic_auth).replace('\n', '')
+            request.add_header('Authorization', 'Basic %s' % authentication)
 
-    # Ping url so it will be cached for testing
-    dict_headers = {}
-    if headers is not '':
-        dict_headers = headers = dict(j.split(':') for j in [i.strip() for i in headers.split(';') if i != ''])
+        # Ping url so it will be cached for testing
+        dict_headers = {}
+        if headers is not '':
+            dict_headers = headers = dict(j.split(':') for j in [i.strip() for i in headers.split(';') if i != ''])
 
-    if contenttype is not '':
-        request.add_header("Content-Type", contenttype)
+        if contenttype is not '':
+            request.add_header("Content-Type", contenttype)
 
-    for key, value in dict_headers.items():
-        request.add_header(key, value)
+        for key, value in dict_headers.items():
+            request.add_header(key, value)
 
-    if url.lower().startswith("https://") and hasattr(ssl, '_create_unverified_context'):
-        context = ssl._create_unverified_context()
-        response = urlopen(request, context=context)
-    else:
-        response = urlopen(request)
+        if url.lower().startswith("https://") and hasattr(ssl, '_create_unverified_context'):
+            context = ssl._create_unverified_context()
+            response = urlopen(request, context=context)
+        else:
+            response = urlopen(request)
 
-    response.read()
+        response.read()
 
     print('Organizing the swarm.')
     # Spin up processes for connecting to EC2 instances
