@@ -29,7 +29,10 @@ try:
     from urllib.parse import urlparse
 except ImportError:
     from urlparse import urlparse
-from optparse import OptionParser, OptionGroup
+from optparse import OptionParser, OptionGroup, Values
+import threading
+import time
+import sys
 
 def parse_options():
     """
@@ -119,6 +122,30 @@ commands:
     attack_group.add_option('-P', '--contenttype', metavar="CONTENTTYPE", nargs=1,
                             action='store', dest='contenttype', type='string', default='text/plain',
                             help="ContentType header to send to the target of the attack.")
+    attack_group.add_option('-S', '--seconds', metavar="SECONDS", nargs=1,
+                            action='store', dest='seconds', type='int', default=60,
+                            help= "hurl only: The number of total seconds to attack the target (default: 60).")
+    attack_group.add_option('-X', '--verb', metavar="VERB", nargs=1,
+                            action='store', dest='verb', type='string', default='',
+                            help= "hurl only: Request command -HTTP verb to use -GET/PUT/etc. Default GET")
+    attack_group.add_option('-M', '--rate', metavar="RATE", nargs=1,
+                            action='store', dest='rate', type='int',
+                            help= "hurl only: Max Request Rate.")
+    attack_group.add_option('-a', '--threads', metavar="THREADS", nargs=1,
+                            action='store', dest='threads', type='int', default=1,
+                            help= "hurl only: Number of parallel threads. Default: 1")
+    attack_group.add_option('-f', '--fetches', metavar="FETCHES", nargs=1,
+                            action='store', dest='fetches', type='int', 
+                            help= "hurl only: Num fetches per instance.")
+    attack_group.add_option('-d', '--timeout', metavar="TIMEOUT", nargs=1,
+                            action='store', dest='timeout', type='int',
+                            help= "hurl only: Timeout (seconds).")
+    attack_group.add_option('-E', '--send_buffer', metavar="SEND_BUFFER", nargs=1,
+                            action='store', dest='send_buffer', type='int',
+                            help= "hurl only: Socket send buffer size.")
+    attack_group.add_option('-F', '--recv_buffer', metavar="RECV_BUFFER", nargs=1,
+                            action='store', dest='recv_buffer', type='int',
+                            help= "hurl only: Socket receive buffer size.")
 
     # Optional
     attack_group.add_option('-T', '--tpr', metavar='TPR', nargs=1, action='store', dest='tpr', default=None, type='float',
@@ -127,6 +154,16 @@ commands:
                             help='The lower bounds for request per second. If this option is passed and the target is above the value a 1 will be returned with the report details (default: None).')
     attack_group.add_option('-A', '--basic_auth', metavar='basic_auth', nargs=1, action='store', dest='basic_auth', default='', type='string',
                             help='BASIC authentication credentials, format auth-username:password (default: None).')
+    attack_group.add_option('-j', '--hurl', metavar="HURL_COMMANDS",
+                            action='store_true', dest='hurl',
+                            help="use hurl")
+    attack_group.add_option('-o', '--long_output', metavar="LONG_OUTPUT",
+                            action='store_true', dest='long_output',
+                            help="display hurl output")
+    attack_group.add_option('-L', '--responses_per', metavar="RESPONSE_PER",
+                            action='store_true', dest='responses_per',
+                            help="hurl only: Display http(s) response codes per interval instead of request statistics")
+
 
     parser.add_option_group(attack_group)
 
@@ -136,6 +173,8 @@ commands:
         parser.error('Please enter a command.')
 
     command = args[0]
+    #set time for in between threads
+    delay = 0.2
 
     if command == 'up':
         if not options.key:
@@ -143,11 +182,34 @@ commands:
 
         if options.group == 'default':
             print('New bees will use the "default" EC2 security group. Please note that port 22 (SSH) is not normally open on this group. You will need to use to the EC2 tools to open it before you will be able to attack.')
+        zone_len = options.zone.split(',')
+        if len(zone_len) > 1:
+            if len(options.instance.split(',')) != len(zone_len):
+                print("Your instance count does not match zone count")
+                sys.exit(1)
+            else:
+                ami_list = [a for a in options.instance.split(',')]
+                zone_list = [z for z in zone_len]
+                # for each ami and zone set zone and instance
+                for tup_val in zip(ami_list, zone_list):
+                    options.instance, options.zone = tup_val
+                    threading.Thread(target=bees.up, args=(options.servers, options.group,
+                                                            options.zone, options.instance,
+                                                            options.type,options.login,
+                                                            options.key, options.subnet,
+                                                            options.bid)).start()
+                    #time allowed between threads
+                    time.sleep(delay)
+        else:
+            bees.up(options.servers, options.group, options.zone, options.instance, options.type, options.login, options.key, options.subnet, options.bid)
 
-        bees.up(options.servers, options.group, options.zone, options.instance, options.type, options.login, options.key, options.subnet, options.bid)
     elif command == 'attack':
         if not options.url:
             parser.error('To run an attack you need to specify a url with -u')
+
+        regions_list = []
+        for region in bees._get_existing_regions():
+                regions_list.append(region)
 
         # urlparse needs a scheme in the url. ab doesn't, so add one just for the sake of parsing.
         # urlparse('google.com').path == 'google.com' and urlparse('google.com').netloc == '' -> True
@@ -164,10 +226,34 @@ commands:
             tpr=options.tpr,
             rps=options.rps,
             basic_auth=options.basic_auth,
-            contenttype=options.contenttype
+            contenttype=options.contenttype,
+            hurl=options.hurl,
+            seconds=options.seconds,
+            rate=options.rate,
+            long_output=options.long_output,
+            responses_per=options.responses_per,
+            verb=options.verb,
+            threads=options.threads,
+            fetches=options.fetches,
+            timeout=options.timeout,
+            send_buffer=options.send_buffer,
+            recv_buffer=options.recv_buffer
         )
+        if options.hurl:
+            for region in regions_list:
+                additional_options['zone'] = region
+                threading.Thread(target=bees.hurl_attack, args=(options.url, options.number, options.concurrent),
+                    kwargs=additional_options).start()
+                #time allowed between threads
+                time.sleep(delay)
+        else:
+            for region in regions_list:
+                additional_options['zone'] = region
+                threading.Thread(target=bees.attack, args=(options.url, options.number,
+                    options.concurrent), kwargs=additional_options).start()
+                #time allowed between threads
+                time.sleep(delay)
 
-        bees.attack(options.url, options.number, options.concurrent, **additional_options)
     elif command == 'down':
         bees.down()
     elif command == 'report':
