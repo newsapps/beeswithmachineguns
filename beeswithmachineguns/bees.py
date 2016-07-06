@@ -658,6 +658,7 @@ def attack(url, n, c, **options):
     post_file = options.get('post_file', '')
     keep_alive = options.get('keep_alive', False)
     basic_auth = options.get('basic_auth', '')
+    sting = options.get('sting', 1)
 
     if csv_filename:
         try:
@@ -728,10 +729,17 @@ def attack(url, n, c, **options):
             'basic_auth': options.get('basic_auth')
         })
 
-    print('Stinging URL so it will be cached for the attack.')
-    url_used_count = min(url_count-1, instance_count-1)
-    pool = Pool(url_used_count+1)
-    pool.map(_sting, params[:url_used_count-1])
+    if sting == 1:
+        print('Stinging URL sequentially so it will be cached for the attack.')
+        for param in params:
+            _sting(param)
+    elif sting == 2:
+        print('Stinging URL in parallel so it will be cached for the attack.')
+        url_used_count = min(url_count-1, instance_count-1)
+        pool = Pool(url_used_count+1)
+        pool.map(_sting, params[:url_used_count-1])
+    else:
+        print('Stinging URL skipped.')
 
     print('Organizing the swarm.')
     # Spin up processes for connecting to EC2 instances
