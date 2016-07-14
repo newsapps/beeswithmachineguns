@@ -122,6 +122,9 @@ commands:
     attack_group.add_option('-P', '--contenttype', metavar="CONTENTTYPE", nargs=1,
                             action='store', dest='contenttype', type='string', default='text/plain',
                             help="ContentType header to send to the target of the attack.")
+    attack_group.add_option('-S', '--sting', metavar="sting", nargs=1,
+                            action='store', dest='sting', type='int', default=1,
+                            help="The flag to sting (ping to cache) url before attack (default: 1). 0: no sting, 1: sting sequentially, 2: sting in parallel")
     attack_group.add_option('-S', '--seconds', metavar="SECONDS", nargs=1,
                             action='store', dest='seconds', type='int', default=60,
                             help= "hurl only: The number of total seconds to attack the target (default: 60).")
@@ -146,7 +149,6 @@ commands:
     attack_group.add_option('-F', '--recv_buffer', metavar="RECV_BUFFER", nargs=1,
                             action='store', dest='recv_buffer', type='int',
                             help= "hurl only: Socket receive buffer size.")
-
     # Optional
     attack_group.add_option('-T', '--tpr', metavar='TPR', nargs=1, action='store', dest='tpr', default=None, type='float',
                             help='The upper bounds for time per request. If this option is passed and the target is below the value a 1 will be returned with the report details (default: None).')
@@ -227,6 +229,7 @@ commands:
             rps=options.rps,
             basic_auth=options.basic_auth,
             contenttype=options.contenttype,
+            sting=options.sting,
             hurl=options.hurl,
             seconds=options.seconds,
             rate=options.rate,

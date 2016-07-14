@@ -319,6 +319,63 @@ def _wait_for_spot_request_fulfillment(conn, requests, fulfilled_requests = []):
 
     return _wait_for_spot_request_fulfillment(conn, [r for r in requests if r not in fulfilled_requests], fulfilled_requests)
 
+def _sting(params):
+    """
+    Request the target URL for caching.
+
+    Intended for use with multiprocessing.
+    """
+    url = params['url']
+    headers = params['headers']
+    contenttype = params['contenttype']
+    cookies = params['cookies']
+    post_file = params['post_file']
+    basic_auth = params['basic_auth']
+
+    # Create request
+    request = Request(url)
+
+    # Need to revisit to support all http verbs.
+    if post_file:
+        try:
+            with open(post_file, 'r') as content_file:
+                content = content_file.read()
+            if IS_PY2:
+                request.add_data(content)
+            else:
+                # python3 removed add_data method from Request and added data attribute, either bytes or iterable of bytes
+                request.data = bytes(content.encode('utf-8'))
+        except IOError:
+            print('bees: error: The post file you provided doesn\'t exist.')
+            return
+
+    if cookies is not '':
+        request.add_header('Cookie', cookies)
+
+    if basic_auth is not '':
+        authentication = base64.encodestring(basic_auth).replace('\n', '')
+        request.add_header('Authorization', 'Basic %s' % authentication)
+
+    # Ping url so it will be cached for testing
+    dict_headers = {}
+    if headers is not '':
+        dict_headers = headers = dict(j.split(':') for j in [i.strip() for i in headers.split(';') if i != ''])
+
+    if contenttype is not '':
+        request.add_header("Content-Type", contenttype)
+
+    for key, value in dict_headers.items():
+        request.add_header(key, value)
+
+    if url.lower().startswith("https://") and hasattr(ssl, '_create_unverified_context'):
+        context = ssl._create_unverified_context()
+        response = urlopen(request, context=context)
+    else:
+        response = urlopen(request)
+
+    response.read()
+
+
 def _attack(params):
     """
     Test the target URL with requests.
@@ -621,6 +678,7 @@ def attack(url, n, c, **options):
     post_file = options.get('post_file', '')
     keep_alive = options.get('keep_alive', False)
     basic_auth = options.get('basic_auth', '')
+    sting = options.get('sting', 1)
 
     if csv_filename:
         try:
@@ -665,8 +723,9 @@ def attack(url, n, c, **options):
     params = []
 
     urls = url.split(",")
+    url_count = len(urls)
 
-    if len(urls) > instance_count:
+    if url_count > instance_count:
         print('bees: warning: more urls given than instances. last urls will be ignored.')
 
     for i, instance in enumerate(instances):
@@ -674,7 +733,7 @@ def attack(url, n, c, **options):
             'i': i,
             'instance_id': instance.id,
             'instance_name': instance.private_dns_name if instance.public_dns_name == "" else instance.public_dns_name,
-            'url': urls[i % len(urls)],
+            'url': urls[i % url_count],
             'concurrent_requests': connections_per_instance,
             'num_requests': requests_per_instance,
             'username': username,
@@ -690,49 +749,17 @@ def attack(url, n, c, **options):
             'basic_auth': options.get('basic_auth')
         })
 
-    print('Stinging URL so it will be cached for the attack.')
-
-    for url in urls:
-        request = Request(url)
-        # Need to revisit to support all http verbs.
-        if post_file:
-            try:
-                with open(post_file, 'r') as content_file:
-                    content = content_file.read()
-                if IS_PY2:
-                    request.add_data(content)
-                else:
-                    # python3 removed add_data method from Request and added data attribute, either bytes or iterable of bytes
-                    request.data = bytes(content.encode('utf-8'))
-            except IOError:
-                print('bees: error: The post file you provided doesn\'t exist.')
-                return
-
-        if cookies is not '':
-            request.add_header('Cookie', cookies)
-
-        if basic_auth is not '':
-            authentication = base64.encodestring(basic_auth).replace('\n', '')
-            request.add_header('Authorization', 'Basic %s' % authentication)
-
-        # Ping url so it will be cached for testing
-        dict_headers = {}
-        if headers is not '':
-            dict_headers = headers = dict(j.split(':') for j in [i.strip() for i in headers.split(';') if i != ''])
-
-        if contenttype is not '':
-            request.add_header("Content-Type", contenttype)
-
-        for key, value in dict_headers.items():
-            request.add_header(key, value)
-
-        if url.lower().startswith("https://") and hasattr(ssl, '_create_unverified_context'):
-            context = ssl._create_unverified_context()
-            response = urlopen(request, context=context)
-        else:
-            response = urlopen(request)
-
-        response.read()
+    if sting == 1:
+        print('Stinging URL sequentially so it will be cached for the attack.')
+        for param in params:
+            _sting(param)
+    elif sting == 2:
+        print('Stinging URL in parallel so it will be cached for the attack.')
+        url_used_count = min(url_count-1, instance_count-1)
+        pool = Pool(url_used_count+1)
+        pool.map(_sting, params[:url_used_count-1])
+    else:
+        print('Stinging URL skipped.')
 
     print('Organizing the swarm.')
     # Spin up processes for connecting to EC2 instances
