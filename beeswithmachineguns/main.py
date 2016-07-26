@@ -122,7 +122,7 @@ commands:
     attack_group.add_option('-P', '--contenttype', metavar="CONTENTTYPE", nargs=1,
                             action='store', dest='contenttype', type='string', default='text/plain',
                             help="ContentType header to send to the target of the attack.")
-    attack_group.add_option('-s', '--sting', metavar="sting", nargs=1,
+    attack_group.add_option('-I', '--sting', metavar="sting", nargs=1,
                             action='store', dest='sting', type='int', default=1,
                             help="The flag to sting (ping to cache) url before attack (default: 1). 0: no sting, 1: sting sequentially, 2: sting in parallel")
     attack_group.add_option('-S', '--seconds', metavar="SECONDS", nargs=1,
