@@ -46,6 +46,11 @@
             "Endpoint": "ec2.us-west-1.amazonaws.com"
         },
         {
+            "RegionName": "us-east-2",
+            "AMI" : "ami-e43a6081",
+            "Endpoint": "ec2.us-east-2.amazonaws.com"
+        },
+        {
             "RegionName": "us-west-2",
             "AMI" : "ami-d5be69b5",
             "Endpoint": "ec2.us-west-2.amazonaws.com"
