@@ -59,7 +59,7 @@ import paramiko
 import json
 from collections import defaultdict
 import time
-from sets import Set
+
 
 STATE_FILENAME = os.path.expanduser('~/.bees')
 
