@@ -120,9 +120,7 @@ def _get_security_group_id(connection, security_group_name, subnet):
         print('The bees need a security group to run under. The one specified was not found.')
         return
 
-    group = security_groups[0] if security_groups else None
-
-    return group.id
+    return security_groups[0].id if security_groups else None
 
 # Methods
 
@@ -209,7 +207,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
                 min_count=count,
                 max_count=count,
                 key_name=key_name,
-                security_group_ids=[groupId],
+                security_group_ids=[groupId] if not subnet else None,
                 instance_type=instance_type,
                 placement=placement,
                 subnet_id=subnet)
@@ -217,6 +215,8 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
         except boto.exception.EC2ResponseError as e:
             print(("Unable to call bees:", e.message))
             print("Is your sec group available in this region?")
+            print(subnet)
+            print(groupId)
             return e
 
         instances = reservation.instances
