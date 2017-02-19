@@ -23,16 +23,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
-from __future__ import division
-from __future__ import print_function
 
-from future import standard_library
-standard_library.install_aliases()
-from builtins import zip
-from builtins import map
-from builtins import bytes
-from builtins import range
-from past.utils import old_div
 from multiprocessing import Pool
 import os
 import re
@@ -41,8 +32,8 @@ import time
 import sys
 IS_PY2 = sys.version_info.major == 2
 if IS_PY2:
-    from urllib.request import urlopen, Request
-    from io import StringIO
+    from urllib2 import urlopen, Request
+    from StringIO import StringIO
 else:
     from urllib.request import urlopen, Request
     from io import StringIO
@@ -88,7 +79,7 @@ def _read_server_list(*mr_zone):
         text = f.read()
         instance_ids = [i for i in text.split('\n') if i != '']
 
-        print(('Read {} bees from the roster: {}').format(len(instance_ids), zone))
+        print('Read {} bees from the roster: {}').format(len(instance_ids), zone)
 
     return (username, key_name, zone, instance_ids)
 
@@ -137,7 +128,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
     if existing_username == username and existing_key_name == key_name and existing_zone == zone:
         ec2_connection = boto.ec2.connect_to_region(_get_region(zone))
         existing_reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
-        existing_instances = [i for i in [r.instances[0] for r in existing_reservations] if i.state == 'running']
+        existing_instances = filter(lambda i: i.state == 'running', [r.instances[0] for r in existing_reservations])
         # User, key and zone match existing values and instance ids are found on state file
         if count <= len(existing_instances):
             # Count is less than the amount of existing instances. No need to create new ones.
@@ -215,7 +206,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
                 subnet_id=subnet)
 
         except boto.exception.EC2ResponseError as e:
-            print(("Unable to call bees:", e.message))
+            print("Unable to call bees:", e.message)
             print("Is your sec group available in this region?")
             return e
 
@@ -223,10 +214,10 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
 
     if instance_ids:
         existing_reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
-        existing_instances = [i for i in [r.instances[0] for r in existing_reservations] if i.state == 'running']
-        list(map(instances.append, existing_instances))
-        dead_instances = [i for i in instance_ids if i not in [j.id for j in existing_instances]]
-        list(map(instance_ids.pop, [instance_ids.index(i) for i in dead_instances]))
+        existing_instances = filter(lambda i: i.state == 'running', [r.instances[0] for r in existing_reservations])
+        map(instances.append, existing_instances)
+        dead_instances = filter(lambda i: i not in [j.id for j in existing_instances], instance_ids)
+        map(instance_ids.pop, [instance_ids.index(i) for i in dead_instances])
 
     print('Waiting for bees to load their machine guns...')
 
@@ -291,7 +282,7 @@ def down(*mr_zone):
 
         ec2_connection = boto.ec2.connect_to_region(_get_region(zone))
 
-        print(('Calling off the swarm for {}.').format(region))
+        print('Calling off the swarm for {}.').format(region)
 
         terminated_instance_ids = ec2_connection.terminate_instances(
             instance_ids=instance_ids)
@@ -373,7 +364,7 @@ def _sting(params):
     if contenttype is not '':
         request.add_header("Content-Type", contenttype)
 
-    for key, value in list(dict_headers.items()):
+    for key, value in dict_headers.items():
         request.add_header(key, value)
 
     if url.lower().startswith("https://") and hasattr(ssl, '_create_unverified_context'):
@@ -556,7 +547,7 @@ def _summarize_results(results, params, csv_filename):
     if summarized_results['num_complete_bees'] == 0:
         summarized_results['mean_response'] = "no bees are complete"
     else:
-        summarized_results['mean_response'] = old_div(sum(complete_results), summarized_results['num_complete_bees'])
+        summarized_results['mean_response'] = sum(complete_results) / summarized_results['num_complete_bees']
 
     summarized_results['tpr_bounds'] = params[0]['tpr']
     summarized_results['rps_bounds'] = params[0]['rps']
@@ -617,7 +608,7 @@ def _get_request_time_cdf(total_complete_requests, complete_bees):
             sample_response_times.append(cdf[j]["Time in ms"])
     sample_response_times.sort()
     # python3 division returns floats so convert back to int
-    request_time_cdf = sample_response_times[0:sample_size:int(old_div(sample_size, n_final_sample))]
+    request_time_cdf = sample_response_times[0:sample_size:int(sample_size / n_final_sample)]
 
     return request_time_cdf
 
@@ -724,8 +715,8 @@ def attack(url, n, c, **options):
         print('bees: error: the number of concurrent requests (%d) must be at most the same as number of requests (%d)' % (c, n))
         return
 
-    requests_per_instance = int(old_div(float(n), instance_count))
-    connections_per_instance = int(old_div(float(c), instance_count))
+    requests_per_instance = int(float(n) / instance_count)
+    connections_per_instance = int(float(c) / instance_count)
 
     print('Each of %i bees will fire %s rounds, %s at a time.' % (instance_count, requests_per_instance, connections_per_instance))
 
@@ -797,7 +788,7 @@ def hurl_attack(url, n, c, **options):
     """
     Test the root url of this site.
     """
-    print(options.get('zone'))
+    print options.get('zone')
     username, key_name, zone, instance_ids = _read_server_list(options.get('zone'))
     headers = options.get('headers', '')
     contenttype = options.get('contenttype', '')
@@ -842,8 +833,8 @@ def hurl_attack(url, n, c, **options):
         print('bees: error: the number of concurrent requests (%d) must be at most the same as number of requests (%d)' % (c, n))
         return
 
-    requests_per_instance = int(old_div(float(n), instance_count))
-    connections_per_instance = int(old_div(float(c), instance_count))
+    requests_per_instance = int(float(n) / instance_count)
+    connections_per_instance = int(float(c) / instance_count)
 
     print('Each of %i bees will fire %s rounds, %s at a time.' % (instance_count, requests_per_instance, connections_per_instance))
 
@@ -912,7 +903,7 @@ def hurl_attack(url, n, c, **options):
     if contenttype is not '':
         request.add_header("Content-Type", contenttype)
 
-    for key, value in list(dict_headers.items()):
+    for key, value in dict_headers.items():
         request.add_header(key, value)
 
     if url.lower().startswith("https://") and hasattr(ssl, '_create_unverified_context'):
@@ -1049,13 +1040,13 @@ def _hurl_attack(params):
                        'end2end-ms-max', 'connect-ms-max' )
             trippletab=('bytes')
             try:
-                print(("Bee: {}").format(params['instance_id']))
-                for k, v in list(response.items()):
+                print("Bee: {}").format(params['instance_id'])
+                for k, v in response.items():
                     if k == 'response-codes':
-                        print(k)
+                        print k
                         tabspace='\t'
-                        for rk, rv in list(v.items()):
-                            print(("{}{}:{}{}").format(tabspace, rk, tabspace+tabspace, rv))
+                        for rk, rv in v.items():
+                            print("{}{}:{}{}").format(tabspace, rk, tabspace+tabspace, rv)
                         continue
                     if k in doubletabs:
                         tabspace='\t\t'
@@ -1063,7 +1054,7 @@ def _hurl_attack(params):
                         tabspace='\t\t\t'
                     else:
                         tabspace='\t'
-                    print(("{}:{}{}").format(k, tabspace, v))
+                    print("{}:{}{}").format(k, tabspace, v)
                 print("\n")
 
             except:
@@ -1075,14 +1066,14 @@ def _hurl_attack(params):
         stdin, stdout, stderr = client.exec_command('cat %(csv_filename)s' % params)
         try:
             hurl_json = dict(json.loads(stdout.read().decode('utf-8')))
-            for k ,v in list(hurl_json.items()):
+            for k ,v in hurl_json.items():
                 response[k] = v
 
             #check if user wants output for seperate instances and Sdisplay if so
             long_out_container=[]
             if params['long_output']:
                 print(hurl_command)
-                print("\n", params['instance_id'] + "\n",params['instance_name'] + "\n" , hurl_results)
+                print "\n", params['instance_id'] + "\n",params['instance_name'] + "\n" , hurl_results
                 _long_output()
                 time.sleep(.02)
 
@@ -1092,7 +1083,7 @@ def _hurl_attack(params):
         finally:
             return response
 
-        print(hurl_json['response-codes'])
+        print hurl_json['response-codes']
         response['request_time_cdf'] = []
         for row in csv.DictReader(stdout):
             row["Time in ms"] = float(row["Time in ms"])
@@ -1134,7 +1125,7 @@ def _hurl_summarize_results(results, params, csv_filename):
     reported_response_codes = [r['response-codes'] for r in [x for x in summarized_results['complete_bees']]]
     for i in reported_response_codes:
         if isinstance(i, dict):
-            for k , v in list(i.items()):
+            for k , v in i.items():
                 if k.startswith('20'):
                     summarized_results['total_number_of_200s']+=float(v)
                 elif k.startswith('30'):
@@ -1157,10 +1148,10 @@ def _hurl_summarize_results(results, params, csv_filename):
     summarized_results['1st-resp-ms-max'] = max(complete_results)
 
     complete_results = [r['1st-resp-ms-mean'] for r in summarized_results['complete_bees']]
-    summarized_results['1st-resp-ms-mean'] = old_div(sum(complete_results), summarized_results['num_complete_bees'])
+    summarized_results['1st-resp-ms-mean'] = sum(complete_results) / summarized_results['num_complete_bees']
 
     complete_results = [r['fetches-per-sec'] for r in summarized_results['complete_bees']]
-    summarized_results['fetches-per-sec'] = old_div(sum(complete_results), summarized_results['num_complete_bees'])
+    summarized_results['fetches-per-sec'] = sum(complete_results) / summarized_results['num_complete_bees']
 
     complete_results = [r['fetches'] for r in summarized_results['complete_bees']]
     summarized_results['total-fetches'] = sum(complete_results)
@@ -1169,27 +1160,27 @@ def _hurl_summarize_results(results, params, csv_filename):
     summarized_results['connect-ms-min'] = min(complete_results)
 
     complete_results = [r['bytes-per-sec'] for r in summarized_results['complete_bees']]
-    summarized_results['bytes-per-second-mean'] = old_div(sum(complete_results), summarized_results['num_complete_bees'])
+    summarized_results['bytes-per-second-mean'] = sum(complete_results) / summarized_results['num_complete_bees']
 
     complete_results = [r['end2end-ms-min'] for r in summarized_results['complete_bees']]
-    summarized_results['end2end-ms-min'] = old_div(sum(complete_results), summarized_results['num_complete_bees'])
+    summarized_results['end2end-ms-min'] = sum(complete_results) / summarized_results['num_complete_bees']
 
     complete_results = [r['mean-bytes-per-conn'] for r in summarized_results['complete_bees']]
-    summarized_results['mean-bytes-per-conn'] = old_div(sum(complete_results), summarized_results['num_complete_bees'])
+    summarized_results['mean-bytes-per-conn'] = sum(complete_results) / summarized_results['num_complete_bees']
 
     complete_results = [r['connect-ms-mean'] for r in summarized_results['complete_bees']]
-    summarized_results['connect-ms-mean'] = old_div(sum(complete_results), summarized_results['num_complete_bees'])
+    summarized_results['connect-ms-mean'] = sum(complete_results) / summarized_results['num_complete_bees']
 
     if summarized_results['num_complete_bees'] == 0:
         summarized_results['mean_response'] = "no bees are complete"
     else:
-        summarized_results['mean_response'] = old_div(sum(complete_results), summarized_results['num_complete_bees'])
+        summarized_results['mean_response'] = sum(complete_results) / summarized_results['num_complete_bees']
 
     complete_results = [r['connect-ms-mean'] for r in summarized_results['complete_bees']]
     if summarized_results['num_complete_bees'] == 0:
         summarized_results['mean_response'] = "no bees are complete"
     else:
-        summarized_results['mean_response'] = old_div(sum(complete_results), summarized_results['num_complete_bees'])
+        summarized_results['mean_response'] = sum(complete_results) / summarized_results['num_complete_bees']
 
 
     summarized_results['tpr_bounds'] = params[0]['tpr']
@@ -1247,7 +1238,7 @@ def _hurl_print_results(summarized_results):
     print('     3xx:\t\t\t%i' % summarized_results['total_number_of_300s'])
     print('     4xx:\t\t\t%i' % summarized_results['total_number_of_400s'])
     print('     5xx:\t\t\t%i' % summarized_results['total_number_of_500s'])
-    print()
+    print
 
     if 'rps_bounds' in summarized_results and summarized_results['rps_bounds'] is not None:
         print('     Requests per second:\t%f [#/sec] (upper bounds)' % summarized_results['rps_bounds'])

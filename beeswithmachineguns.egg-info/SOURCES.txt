@@ -1,0 +1,10 @@
+bees
+setup.py
+beeswithmachineguns/__init__.py
+beeswithmachineguns/bees.py
+beeswithmachineguns/main.py
+beeswithmachineguns.egg-info/PKG-INFO
+beeswithmachineguns.egg-info/SOURCES.txt
+beeswithmachineguns.egg-info/dependency_links.txt
+beeswithmachineguns.egg-info/requires.txt
+beeswithmachineguns.egg-info/top_level.txt
