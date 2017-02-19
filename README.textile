@@ -6,7 +6,7 @@ Also, retribution for "this shameful act":http://kottke.org/10/10/tiny-catapult-
 
 h2. Dependencies
 
-* Python 2.6
+* Python 2.6 - 3.6
 * boto
 * paramiko
 
