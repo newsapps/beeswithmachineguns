@@ -2,6 +2,7 @@ bees
 setup.py
 beeswithmachineguns/__init__.py
 beeswithmachineguns/bees.py
+beeswithmachineguns/bees_test.py
 beeswithmachineguns/main.py
 beeswithmachineguns.egg-info/PKG-INFO
 beeswithmachineguns.egg-info/SOURCES.txt
