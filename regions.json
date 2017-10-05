@@ -2,58 +2,73 @@
     "Regions": [
         {
             "RegionName": "eu-west-1",
-            "AMI": "ami-b31362c0",
+            "AMI": "ami-8b8f59f2",
             "Endpoint": "ec2.eu-west-1.amazonaws.com"
         },
         {
             "RegionName": "ap-southeast-1",
-            "AMI" : "ami-b0fa22d3",
+            "AMI" : "ami-82dfa0e1",
             "Endpoint": "ec2.ap-southeast-1.amazonaws.com"
         },
         {
             "RegionName": "ap-southeast-2",
-            "AMI" : "ami-739cab10",
+            "AMI" : "ami-fc23c09e",
             "Endpoint": "ec2.ap-southeast-2.amazonaws.com"
         },
         {
             "RegionName": "eu-central-1",
-            "AMI" : "ami-558d7d3a",
+            "AMI" : "ami-2385384c",
             "Endpoint": "ec2.eu-central-1.amazonaws.com"
         },
         {
             "RegionName": "ap-northeast-2",
-            "AMI" : "ami-28aa7f46",
+            "AMI" : "ami-0322f86d",
             "Endpoint": "ec2.ap-northeast-2.amazonaws.com"
         },
         {
             "RegionName": "ap-northeast-1",
-            "AMI": "ami-eeeb258f",
+            "AMI": "ami-79b0631f",
             "Endpoint": "ec2.ap-northeast-1.amazonaws.com"
         },
         {
             "RegionName": "us-east-1",
-            "AMI" : "ami-1b55360c",
+            "AMI" : "ami-25c9335f",
             "Endpoint": "ec2.us-east-1.amazonaws.com"
         },
         {
             "RegionName": "sa-east-1",
-            "AMI" : "ami-4cb92820",
+            "AMI" : "ami-7fa6d913",
             "Endpoint": "ec2.sa-east-1.amazonaws.com"
         },
         {
             "RegionName": "us-west-1",
-            "AMI" : "ami-8b014ceb",
+            "AMI" : "ami-e44b7884",
             "Endpoint": "ec2.us-west-1.amazonaws.com"
         },
         {
             "RegionName": "us-east-2",
-            "AMI" : "ami-e43a6081",
+            "AMI" : "ami-51c0ed34",
             "Endpoint": "ec2.us-east-2.amazonaws.com"
         },
         {
             "RegionName": "us-west-2",
-            "AMI" : "ami-d5be69b5",
+            "AMI" : "ami-26c90c5e",
             "Endpoint": "ec2.us-west-2.amazonaws.com"
+        },
+        {
+            "RegionName": "eu-west-2",
+            "AMI" : "ami-27d2c043",
+            "Endpoint": "ec2.eu-west-2.amazonaws.com"
+        },
+        {
+            "RegionName": "ap-south-1",
+            "AMI" : "ami-4452122b",
+            "Endpoint": "ec2.ap-south-1.amazonaws.com"
+        },
+        {
+            "RegionName": "ca-central-1",
+            "AMI" : "ami-d92891bd",
+            "Endpoint": "ec2.ca-central-1.amazonaws.com"
         }
     ]
 }
