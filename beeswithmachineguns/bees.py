@@ -992,7 +992,7 @@ def _hurl_attack(params):
             pem_file_path=_get_pem_path(params['key_name'])
             scpCommand = "scp -q -o 'StrictHostKeyChecking=no' -i %s %s %s@%s:~/" % (pem_file_path, params['post_file'], params['username'], params['instance_name'])
             os.system(scpCommand)
-            options += ' -p ~/%s' % params['post_file']
+            options += ' -d ~/%s' % params['post_file']
 
         if params['cookies'] is not '':
             options += ' -H \"Cookie: %s;\"' % params['cookies']
