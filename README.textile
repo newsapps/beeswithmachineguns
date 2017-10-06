@@ -12,16 +12,8 @@ h2. Dependencies
 
 h2. Installation for users
 
-Preferred:
-
 <pre>
-pip install beeswithmachineguns
-</pre>
-
-or, if you must:
-
-<pre>
-easy_install beeswithmachineguns
+pip install https://github.com/newsapps/beeswithmachineguns/archive/master.zip
 </pre>
 
 h2. Installation for developers (w/ virtualenv + virtualenvwrapper)
