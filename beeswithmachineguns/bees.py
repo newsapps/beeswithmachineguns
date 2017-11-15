@@ -207,7 +207,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
                 min_count=count,
                 max_count=count,
                 key_name=key_name,
-                security_group_ids=[groupId] if not subnet else None,
+                security_group_ids=[groupId],
                 instance_type=instance_type,
                 placement=placement,
                 subnet_id=subnet)
