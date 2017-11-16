@@ -1013,11 +1013,12 @@ If you decide to use the Bees, please keep in mind the following important cavea
 You have been warned.
 
 h2. Troubleshooting
+
 h3. Clean Slate
 
 If you find yourself in a situation where 'bees report' seems to be out of sync with EC2 instances you know are (or are not) running:
-- You can reset the BWMG state by deleting ~/.bees.<region>.  Note that this will prevent BWMG from identifying EC2 instances that may now be orphaned by the tool
-- You can manually edit ~/.bees.<region> to add or remove instance IDs and force synchronization with the reality from your EC2 dashboard
+* You can reset the BWMG state by deleting ~/.bees.<region>.  Note that this will prevent BWMG from identifying EC2 instances that may now be orphaned by the tool
+* You can manually edit ~/.bees.<region> to add or remove instance IDs and force synchronization with the reality from your EC2 dashboard
 
 This is helpful in cases where BWMG crashes, EC2 instances are terminated outside of the control of BWMG, or other situations where BWMG is out of sync with reality.
 
