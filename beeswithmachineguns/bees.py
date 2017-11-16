@@ -441,6 +441,9 @@ def _attack(params):
         else:
             options += ' -C \"sessionid=NotARealSessionID\"'
 
+        if params['ciphers'] is not '':
+            options += ' -Z %s' % params['ciphers']
+
         if params['basic_auth'] is not '':
             options += ' -A %s' % params['basic_auth']
 
@@ -684,6 +687,7 @@ def attack(url, n, c, **options):
     contenttype = options.get('contenttype', '')
     csv_filename = options.get("csv_filename", '')
     cookies = options.get('cookies', '')
+    ciphers = options.get('ciphers', '')
     post_file = options.get('post_file', '')
     keep_alive = options.get('keep_alive', False)
     basic_auth = options.get('basic_auth', '')
@@ -750,6 +754,7 @@ def attack(url, n, c, **options):
             'headers': headers,
             'contenttype': contenttype,
             'cookies': cookies,
+            'ciphers': ciphers,
             'post_file': options.get('post_file'),
             'keep_alive': options.get('keep_alive'),
             'mime_type': options.get('mime_type', ''),

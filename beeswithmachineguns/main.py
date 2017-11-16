@@ -120,6 +120,9 @@ commands:
     attack_group.add_option('-H', '--headers', metavar="HEADERS", nargs=1,
                             action='store', dest='headers', type='string', default='',
                             help="HTTP headers to send to the target to attack. Multiple headers should be separated by semi-colons, e.g header1:value1;header2:value2")
+    attack_group.add_option('-Z', '--ciphers', metavar="CIPHERS", nargs=1,
+                            action='store', dest='ciphers', type='string', default='',
+                            help="Openssl SSL/TLS cipher name(s) to use for negotiation.  Passed directly to ab's -Z option.  ab-only.")
     attack_group.add_option('-e', '--csv', metavar="FILENAME", nargs=1,
                             action='store', dest='csv_filename', type='string', default='',
                             help="Store the distribution of results in a csv file for all completed bees (default: '').")
@@ -224,6 +227,7 @@ commands:
             options.url += '/'
         additional_options = dict(
             cookies=options.cookies,
+            ciphers=options.ciphers,
             headers=options.headers,
             post_file=options.post_file,
             keep_alive=options.keep_alive,
