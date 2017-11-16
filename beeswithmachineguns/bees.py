@@ -135,7 +135,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
     if existing_username == username and existing_key_name == key_name and existing_zone == zone:
         ec2_connection = boto.ec2.connect_to_region(_get_region(zone))
         existing_reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
-        existing_instances = [i for i in [r.instances[0] for r in existing_reservations] if i.state == 'running']
+        existing_instances = [instance for reservation in existing_reservations for instance in reservation.instances if instance.state == 'running']
         # User, key and zone match existing values and instance ids are found on state file
         if count <= len(existing_instances):
             # Count is less than the amount of existing instances. No need to create new ones.
@@ -223,7 +223,7 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
 
     if instance_ids:
         existing_reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
-        existing_instances = [i for i in [r.instances[0] for r in existing_reservations] if i.state == 'running']
+        existing_instances = [instance for reservation in existing_reservations for instance in reservation.instances if instance.state == 'running']
         list(map(instances.append, existing_instances))
         dead_instances = [i for i in instance_ids if i not in [j.id for j in existing_instances]]
         list(map(instance_ids.pop, [instance_ids.index(i) for i in dead_instances]))
