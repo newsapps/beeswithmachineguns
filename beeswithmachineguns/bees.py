@@ -445,7 +445,7 @@ def _attack(params):
             options += ' -A %s' % params['basic_auth']
 
         params['options'] = options
-    	# substrings to use for fgrep to perform remote output filtering
+        # substrings to use for fgrep to perform remote output filtering
         # resolves issue #194, too much data sent over SSH control channel to BWMG
         # any future statistics parsing that requires more output from ab
         # may need this line altered to include other patterns
