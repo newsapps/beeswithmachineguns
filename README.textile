@@ -1014,7 +1014,7 @@ You have been warned.
 
 h2. Troubleshooting
 
-h3. Clean Slate
+h3. EC2 Instances Out Of Sync
 
 If you find yourself in a situation where 'bees report' seems to be out of sync with EC2 instances you know are (or are not) running:
 * You can reset the BWMG state by deleting ~/.bees.<region>.  Note that this will prevent BWMG from identifying EC2 instances that may now be orphaned by the tool
