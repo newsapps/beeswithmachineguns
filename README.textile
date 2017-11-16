@@ -229,6 +229,9 @@ Options:
                         should be passed using standard cookie formatting,
                         separated by semi-colons and assigned with equals
                         signs.
+    -Z CIPHERS, --ciphers=CIPHERS
+                        Openssl SSL/TLS cipher name(s) to use for negotiation.  Passed
+                        directly to ab's -Z option.  ab-only.
     -c CONCURRENT, --concurrent=CONCURRENT
                         The number of concurrent connections to make to the
                         target (default: 100).
