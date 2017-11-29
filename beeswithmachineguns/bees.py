@@ -110,6 +110,8 @@ def _get_region(zone):
     return zone if 'gov' in zone else zone[:-1] # chop off the "d" in the "us-east-1d" to get the "Region"
 
 def _get_security_group_id(connection, security_group_name, subnet):
+    """Takes a security group name and returns the ID.  If the name cannot be found, the name will be attempted
+    as an ID.  The first group found by this name or ID will be used."""
     if not security_group_name:
         print('The bees need a security group to run under. Need to open a port from where you are to the target subnet.')
         return
@@ -117,8 +119,10 @@ def _get_security_group_id(connection, security_group_name, subnet):
     security_groups = connection.get_all_security_groups(filters={'group-name': [security_group_name]})
 
     if not security_groups:
-        print('The bees need a security group to run under. The one specified was not found.')
-        return
+        security_groups = connection.get_all_security_groups(filters={'group-id': [security_group_name]})
+        if not security_groups:
+            print('The bees need a security group to run under. The one specified was not found.')
+            return
 
     return security_groups[0].id if security_groups else None
 
