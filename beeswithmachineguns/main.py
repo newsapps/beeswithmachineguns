@@ -89,6 +89,9 @@ commands:
     up_group.add_option('-b', '--bid', metavar="BID", nargs=1,
                         action='store', dest='bid', type='float', default=None,
                         help="The maximum bid price per spot instance (default: None).")
+    up_group.add_option('-x', '--tags', metavar="TAGS", nargs=1,
+                        action='store', dest='tags', type='string', default=None,
+                        help="custome tags for bee instances")
 
     parser.add_option_group(up_group)
 
@@ -206,11 +209,11 @@ commands:
                                                             options.zone, options.instance,
                                                             options.type,options.login,
                                                             options.key, options.subnet,
-                                                            options.bid)).start()
+                                                            options.tags, options.bid)).start()
                     #time allowed between threads
                     time.sleep(delay)
         else:
-            bees.up(options.servers, options.group, options.zone, options.instance, options.type, options.login, options.key, options.subnet, options.bid)
+            bees.up(options.servers, options.group, options.zone, options.instance, options.type, options.login, options.key, options.subnet, options.tags, options.bid)
 
     elif command == 'attack':
         if not options.url:
