@@ -39,6 +39,7 @@ import re
 import socket
 import time
 import sys
+import ast
 IS_PY2 = sys.version_info.major == 2
 if IS_PY2:
     from urllib.request import urlopen, Request
@@ -128,7 +129,7 @@ def _get_security_group_id(connection, security_group_name, subnet):
 
 # Methods
 
-def up(count, group, zone, image_id, instance_type, username, key_name, subnet, bid = None):
+def up(count, group, zone, image_id, instance_type, username, key_name, subnet, tags, bid = None):
     """
     Startup the load testing server.
     """
@@ -224,6 +225,14 @@ def up(count, group, zone, image_id, instance_type, username, key_name, subnet, 
             return e
 
         instances = reservation.instances
+    if tags:
+        try:
+            tags_dict = ast.literal_eval(tags)
+            ids = [instance.id for instance in instances]
+            ec2_connection.create_tags(ids, tags_dict)
+        except Exception as e:
+            print("Unable to create tags:")
+            print("example: bees up -x \"{'any_key': 'any_value'}\"")
 
     if instance_ids:
         existing_reservations = ec2_connection.get_all_instances(instance_ids=instance_ids)
